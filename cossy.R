@@ -641,10 +641,14 @@ cossy <- function(expression, cls, misset, nmis=5){
     
   }
   
-  toReturn <- list()
+  topMis <- list()
   for(gisIndex in 1:k){
     gis <- kgis[[gisIndex]]
     lfil <- kLocalFilters[[gisIndex]]
+    freq <- kfreq[[gisIndex]]
+    centers <- clusterings[[gisIndex]]
+    colnames(centers) <- lfil$probes
+    
     
     gisProfiles <- getExpressionData(expression, gis, onlyValues=FALSE)
     allProbes <- rownames(gisProfiles)
@@ -656,18 +660,110 @@ cossy <- function(expression, cls, misset, nmis=5){
                 pathway=gis$name, 
                 probes=allProbes,
                 genes=geneNames,
-                profiles=gisProfiles,
+                #profiles=gisProfiles,
                 representative.probes=lfil$probes,
-                representative.genes=representativeGeneNames)
+                representative.genes=representativeGeneNames,
+                centers=centers,
+                freq=freq)
     
     
-    toReturn[[length(toReturn)+1]] <- mis
+    topMis[[length(topMis)+1]] <- mis
   }
   
-  return(toReturn)
+  #predparams <- list(mis=kgis, center=clusterings, freq=kfreq, fil=kLocalFilters, g2pmap=g2pmap, getEData=getExpressionData)
+  return(list(topmis=topMis, cls=list(pos=positiveClass, neg=negativeClass)))
   
 }
 
 predict <- function(cossyobj, expression){
+#   g2pmap
+#   gis <- kgis[[gisIndex]]
+#   centers <- clusterings[[gisIndex]]
+#   freq <- kfreq[[gisIndex]]
+#   lfil <- kLocalFilters[[gisIndex]]
+  
+  topmis <- cossyobj$topmis
+  cls <- cossyobj$cls
+  #getExpressionData <- params$getEData
+  
+  vote <- function(probes, testExpression, clusterCenters, freqInCluster){
+    
+    colnames(testExpression) <- tolower(colnames(testExpression))
+    rownames(testExpression) <- testExpression[,"name"]
+    colIndexes <- !colnames(testExpression) %in% c("name","description", "kid");
+    testSamplesExpression <- testExpression[probes, colIndexes, drop=F]
+    
+    sampleExpression <- (t(testSamplesExpression[,1]))[1,]
+    
+    # find the colsest cluster index
+    distances <- apply(clusterCenters, 1, function(center) euclideanDitance(center, sampleExpression))
+    closestCluster <- which.min(distances)
+    
+    # count no of pos and neg samples in the colses center
+    npos <- freqInCluster[as.character(closestCluster), "pos"]
+    nneg <- freqInCluster[as.character(closestCluster), "neg"]
+    
+    # vote
+    voteForPos <-  npos / (npos + nneg)
+    return(voteForPos)
+  }
+  
+  getExpressionData <- function(expression, genes, onlyValues=TRUE){
+    #genes <- geneset$genes
+    
+    #splits <- strsplit(expression$kid, ";")
+    #rowIndexes <- sapply(splits, function(kids){
+    #  return(any(kids %in% genes))
+    #})
+    
+    rowIndexes <- unique(unlist(g2pmap[genes]))
+    
+    if(onlyValues){
+      colIndexes <- !colnames(expression) %in% c("name","description", "kid");
+    }
+    else{
+      colIndexes <- 1:ncol(expression);
+    }
+    
+    return(expression[rowIndexes, colIndexes, drop=FALSE])
+  }
+  
+  euclideanDitance <- function(p1, p2){
+    tmp <- data.frame(p1=p1, p2=p2)
+    return(sqrt(sum((p1-p2)^2)))
+  }
+  
+  ######### vote by top k GIS #########
+  voteForPos <- 0
+  k <- length(topmis)
+  for(gisIndex in 1:k){
+    
+#     predparams <- list(mis=gis, center=clusterings, freq=kfreq, fil=kLocalFilters, g2pmap=g2pmap, getEData=getExpressionData)
+#     return(list(topmis=topMis, predparams=predparams)
+    
+    probes <- topmis[[gisIndex]]$representative.probes
+    centers <- topmis[[gisIndex]]$centers
+    freq <- topmis[[gisIndex]]$freq
+    
+#     centers <- params$center[[gisIndex]]
+#     freq <- params$freq[[gisIndex]]
+    
+    vpForCurrent <-  vote(probes, expression, centers, freq)
+    print(vpForCurrent)
+    
+    voteForPos <- voteForPos + vpForCurrent
+  }
+  
+  prediction <- NA
+  voteForNeg <- k-voteForPos
+  if(voteForPos > voteForNeg){
+    prediction <- cls$pos
+  }  else if(voteForPos < voteForNeg){
+    prediction <- cls$neg
+  } else {
+    stop("Binary voting needed.")
+  }
+
+  return(prediction)
   
 }
