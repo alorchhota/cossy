@@ -9,3 +9,6 @@
 
 # R package check folder
 *.Rcheck
+
+# data and data folder
+data
