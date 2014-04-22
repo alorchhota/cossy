@@ -749,7 +749,7 @@ predict <- function(cossyobj, expression){
 #     freq <- params$freq[[gisIndex]]
     
     vpForCurrent <-  vote(probes, expression, centers, freq)
-    print(vpForCurrent)
+    #print(vpForCurrent)
     
     voteForPos <- voteForPos + vpForCurrent
   }
