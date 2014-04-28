@@ -25,7 +25,7 @@ kegg <- readGmtFile(gmtfile)
 ## You may like to separate training and test data.
 ## Note: the predict function works for only one sample.
 
-testSampleNumber <- 2
+testSampleNumber <- 1
 trdata <- exdata[,-(2+testSampleNumber)]
 trclass <- cls[-testSampleNumber,,drop=F]
 
@@ -62,4 +62,4 @@ tsdata <- preprocessTestExpression(preprocessObj=preprocobj, expression=tsdata)$
 
 # predict test sample and show output
 prediction <- predict(cossyobj=csy,expression=tsdata)
-print(paste0("Actual Class: ", tsclass, "; Predicted Class: ", prediction))
+print(paste0("Actual Class: ", tsclass[1,'class'], "; Predicted Class: ", prediction))

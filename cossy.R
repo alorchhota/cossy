@@ -238,7 +238,6 @@ cossy <- function(expression, cls, misset, nmis=5){
   mergeGisSets <- function(allGis, expression){
     
     ### find pairwise intersection score of all gis
-    #passedGis <- c()
     
     #cat(paste(Sys.time(), "Merge start: creating initial filters ...\n"))
     
@@ -250,7 +249,11 @@ cossy <- function(expression, cls, misset, nmis=5){
       return(lfil)
     })
     
-    
+    ## remove GIS having less than 5 probes
+    gisLength <- sapply(allFilters['probes',], length)
+    passedGis <- gisLength >= n.threshold.local
+    allGis <- allGis[passedGis]
+    allFilters <- allFilters[,passedGis]
     
     ngis <- length(allGis)
     #   if(ngis == 0){
@@ -326,10 +329,13 @@ cossy <- function(expression, cls, misset, nmis=5){
       #}
       
       
+      
       maxIndexes <- which(overlap==maxScore, arr.ind=T)
       
       if(nrow(maxIndexes) > 1){
         deScores <- as.vector(apply(maxIndexes, 1, deScoreOfPair))
+        # Here, if any deScore is NA/NAN, then chooseIndex will have length 0.
+        # Consequently, an error occur to assign allGis[[mergeIndexes[1]]] <- NA
         chooseIndex <- which(deScores==max(deScores), arr.ind=T)
         mergeIndexes <- maxIndexes[chooseIndex[1],]
       }
@@ -354,6 +360,7 @@ cossy <- function(expression, cls, misset, nmis=5){
       rm(mergedSetExpression, mergedFilter, candidateProbes)
       
       ##### 25 sec #####
+      
       
       # remove individual genes from allGIS and put their overlap score to 0
       allGis[[mergeIndexes[1]]] <- NA
@@ -404,7 +411,7 @@ cossy <- function(expression, cls, misset, nmis=5){
   }
   
   intersectionScore <- function(probes1, probes2){
-    return(sum(probes1 %in% probes2)/length(probes1))
+    return(sum(probes1 %in% probes2)/n.threshold.local)
   }
   
   expandMatrix <- function(m, extraRow=1, extraCol=1, defaultValue=0){
@@ -437,6 +444,10 @@ cossy <- function(expression, cls, misset, nmis=5){
   
   hclustCluster <- function(data, noOfClusters, trainingClasses){
     #### cluster #####
+    if(ncol(data) < n.threshold.local){
+      return(list(NA, NA, .Machine$integer.max, NA))
+    }
+    
     
     #d <- getDistanceMatrix(data=data, method="euclidean")
     d <- dist(data, method="euclidean")
@@ -549,8 +560,8 @@ cossy <- function(expression, cls, misset, nmis=5){
     iqr.test <- function(x,y){
       medx <- median(x)
       medy <- median(y)
-      iqrx <- IQR(x)
-      iqry <- IQR(y)
+      iqrx <- IQR(x, na.rm=T)
+      iqry <- IQR(y, na.rm=T)
       nx <- length(x)
       ny <- length(y)
       
@@ -570,7 +581,7 @@ cossy <- function(expression, cls, misset, nmis=5){
     
     scores <- apply(expVal, 1, ourIqrTest)
     scores <- as.vector(scores)
-    ord <- order(scores,decreasing=TRUE)
+    ord <- order(scores,decreasing=TRUE,na.last=NA)
     fil <- rep(FALSE, length(scores))
     fil[ord[1:threshold]] <- TRUE
     
