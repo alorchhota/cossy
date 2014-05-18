@@ -33,7 +33,6 @@ testSampleNumber <- 1
 trdata <- exdata[,-(2+testSampleNumber)]
 trclass <- cls[-testSampleNumber,,drop=F]
 
-
 ## If your data is not pre-processed (i.e. not normalized or not z-transformed), 
 ## you can do so using preprocessTrainingExpression() function. 
 ## You may omit this step if your data is already processed.
