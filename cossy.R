@@ -496,7 +496,7 @@ cossy <- function(expression, cls, misset, nmis=5){
     
     clustersWithClass <- data.frame(cluster=clusters, class=classes)
     
-    countClassSamplesInCluster <- function(cluster, class){
+    countSamplesInClsterscountClassSamplesInCluster <- function(cluster, class){
       sum(apply(clustersWithClass, 1, function(row) return(trim(row["cluster"])==cluster && trim(row["class"])==class)))
     }
     
@@ -512,7 +512,8 @@ cossy <- function(expression, cls, misset, nmis=5){
   countSamplesInClsters <- function(clusters, classes){
     clustersWithClass <- data.frame(cluster=clusters, class=classes)
     freq = table(clustersWithClass)
-    counts = data.frame(cluster=clusters, pos=freq[clusters, positiveClass], neg=freq[clusters, negativeClass], row.names=clusters)
+    clusters = as.numeric(row.names(freq))
+    counts = data.frame(cluster=clusters, pos=as.numeric(freq[clusters, positiveClass]), neg=as.numeric(freq[clusters, negativeClass]), row.names=clusters)
     return(counts)
   }
   
@@ -540,6 +541,7 @@ cossy <- function(expression, cls, misset, nmis=5){
 #       nneg <- row$neg
 #       totalEntropy <- totalEntropy + (clusterEntropy(npos, nneg) * (npos+nneg) / denominator)
 #     }
+
 
     clusterEntropies <- apply(frequencyInCluster, 1, function(row){
       clusterEntropy(row["pos"], row["neg"]) * (row["pos"]+row["neg"]) / denominator
