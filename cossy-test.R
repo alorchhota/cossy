@@ -1,6 +1,10 @@
 ## load cossy functions
 source('cossy.R')
 
+print(Sys.time())
+
+set.seed(101)
+
 # Firstly, you will need to prepare 2 or 3 files (*.gct, *.cls, and *.chip) depending on your situation. 
 # If you include the gene symbols in the 'description' column of *.gct file, you'll not require the *.chip file.
 # Besides, I am planning to incorporate the network mis data in the R package. 
@@ -63,3 +67,5 @@ tsdata <- preprocessTestExpression(preprocessObj=preprocobj, expression=tsdata)$
 # predict test sample and show output
 prediction <- predict(cossyobj=csy,expression=tsdata)
 print(paste0("Actual Class: ", tsclass[1,'class'], "; Predicted Class: ", prediction))
+
+print(Sys.time())

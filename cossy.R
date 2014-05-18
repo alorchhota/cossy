@@ -445,14 +445,14 @@ cossy <- function(expression, cls, misset, nmis=5){
   hclustCluster <- function(data, noOfClusters, trainingClasses){
     #### cluster #####
     if(ncol(data) < n.threshold.local){
-      return(list(NA, NA, .Machine$integer.max, NA))
+      return(list(NA, NA, .Machine$integer.max, NA, 1))
     }
     
     
     #d <- getDistanceMatrix(data=data, method="euclidean")
     d <- dist(data, method="euclidean")
     
-    fit <- hclust(d,method="ward")
+    fit <- hclust(d,method="ward.D")
     clusters <- cutree(fit, k=noOfClusters)
     
     splitData <- split(as.data.frame(data), clusters)
@@ -470,10 +470,29 @@ cossy <- function(expression, cls, misset, nmis=5){
     classFrequencyInClusters <- countSamplesInClsters(clusters, trainingClasses)
     ent <- entropy(classFrequencyInClusters)
     
-    return(list(centers, classFrequencyInClusters, ent, clusters))
+    #### calculate p-value of entropy ####
+    #### by permutating class labels 1000 times ####
+    
+    randomEntropy <- function(clusters, trainingClasses){
+      # randomize training labels
+      nlabels <- nrow(trainingClasses) 
+      randomClasses <- trainingClasses[sample(1:nlabels, size=nlabels, replace=F),,drop=F]
+      classFrequencyInClusters <- countSamplesInClsters(clusters, randomClasses)
+      ent <- entropy(classFrequencyInClusters)
+      return(ent)
+    }
+    
+    randomEntropies <- sapply(1:1000, function(i){
+      randomEntropy(clusters, trainingClasses)
+    })
+    
+    den = density(randomEntropies, from=0, to=1)
+    pval = sum(den$y[den$x<=ent])/sum(den$y)
+    
+    return(list(centers, classFrequencyInClusters, ent, clusters, pval))
   }
   
-  countSamplesInClsters <- function(clusters, classes){
+  countSamplesInClsters_v0 <- function(clusters, classes){
     
     clustersWithClass <- data.frame(cluster=clusters, class=classes)
     
@@ -490,6 +509,13 @@ cossy <- function(expression, cls, misset, nmis=5){
     
   }
   
+  countSamplesInClsters <- function(clusters, classes){
+    clustersWithClass <- data.frame(cluster=clusters, class=classes)
+    freq = table(clustersWithClass)
+    counts = data.frame(cluster=clusters, pos=freq[clusters, positiveClass], neg=freq[clusters, negativeClass], row.names=clusters)
+    return(counts)
+  }
+  
   entropy <- function(frequencyInCluster){
     # normalize by dividing by total no of samples of each class
     frequencyInCluster <- normalizeClusterFrequency(frequencyInCluster)
@@ -504,16 +530,22 @@ cossy <- function(expression, cls, misset, nmis=5){
         return(-p*log2(p) - (1-p)*log2(1-p))
       }
     }
-    
-    totalEntropy <- 0
+
     denominator <- 2 # for binary classification, sum of all the fractions is 2
-    for(i in 1:nrow(frequencyInCluster)){
-      row <- frequencyInCluster[i,]
-      npos <- row$pos
-      nneg <- row$neg
-      totalEntropy <- totalEntropy + (clusterEntropy(npos, nneg) * (npos+nneg) / denominator)
-    }
     
+#     totalEntropy <- 0
+#     for(i in 1:nrow(frequencyInCluster)){
+#       row <- frequencyInCluster[i,]
+#       npos <- row$pos
+#       nneg <- row$neg
+#       totalEntropy <- totalEntropy + (clusterEntropy(npos, nneg) * (npos+nneg) / denominator)
+#     }
+
+    clusterEntropies <- apply(frequencyInCluster, 1, function(row){
+      clusterEntropy(row["pos"], row["neg"]) * (row["pos"]+row["neg"]) / denominator
+    })
+    
+    totalEntropy <- sum(clusterEntropies)
     return(totalEntropy)
     
   }
@@ -616,8 +648,10 @@ cossy <- function(expression, cls, misset, nmis=5){
   expressionValColIndexes <- !colnames(trainingExpression) %in% c("name","description", "kid");
   
   setIndex <- 0   
+  print(length(gene_sets))
   for(set in gene_sets){
     setIndex <- setIndex + 1
+    print(setIndex)
     
     lfil <- set_filters[,setIndex]
     setExpression <- getExpressionValues(trainingExpression[lfil$probes,], expressionValColIndexes)
@@ -634,7 +668,7 @@ cossy <- function(expression, cls, misset, nmis=5){
     clusterResult <- entropyCluster(setExpression, NoOfClusters, trainingClasses)
     clusterCenters <- clusterResult[[1]]
     classFrequencyInClusters <- clusterResult[[2]]
-    ent <- clusterResult[[3]]
+    ent <- clusterResult[[5]]
     
     #### sort and take top k ####
     clusterings[[length(clusterings)+1]] <- clusterCenters
