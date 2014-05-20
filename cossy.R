@@ -740,15 +740,17 @@ predict <- function(cossyobj, expression){
 #   freq <- kfreq[[gisIndex]]
 #   lfil <- kLocalFilters[[gisIndex]]
   
+  ## process row and column names of expression (make lower case)
+  colnames(expression) <- tolower(colnames(expression))
+  rownames(expression) <- expression[,"name"]
+  nonExpressionColNames <- c("name","description", "kid")
+  
   topmis <- cossyobj$topmis
   cls <- cossyobj$cls
   #getExpressionData <- params$getEData
   
   vote <- function(probes, testExpression, clusterCenters, freqInCluster){
-    
-    colnames(testExpression) <- tolower(colnames(testExpression))
-    rownames(testExpression) <- testExpression[,"name"]
-    colIndexes <- !colnames(testExpression) %in% c("name","description", "kid");
+    colIndexes <- !colnames(testExpression) %in% nonExpressionColNames;
     testSamplesExpression <- testExpression[probes, colIndexes, drop=F]
     
     sampleExpression <- (t(testSamplesExpression[,1]))[1,]
@@ -766,62 +768,54 @@ predict <- function(cossyobj, expression){
     return(voteForPos)
   }
   
-  getExpressionData <- function(expression, genes, onlyValues=TRUE){
-    #genes <- geneset$genes
-    
-    #splits <- strsplit(expression$kid, ";")
-    #rowIndexes <- sapply(splits, function(kids){
-    #  return(any(kids %in% genes))
-    #})
-    
-    rowIndexes <- unique(unlist(g2pmap[genes]))
-    
-    if(onlyValues){
-      colIndexes <- !colnames(expression) %in% c("name","description", "kid");
-    }
-    else{
-      colIndexes <- 1:ncol(expression);
-    }
-    
-    return(expression[rowIndexes, colIndexes, drop=FALSE])
-  }
-  
   euclideanDitance <- function(p1, p2){
     tmp <- data.frame(p1=p1, p2=p2)
     return(sqrt(sum((p1-p2)^2)))
   }
   
-  ######### vote by top k GIS #########
-  voteForPos <- 0
+  #### predict class of all the samples
   k <- length(topmis)
-  for(gisIndex in 1:k){
+  sampleNames <- setdiff(colnames(expression), nonExpressionColNames)
+  predictions <- sapply(sampleNames, function(sampleName){
+    colIndexes <- colnames(expression) %in% c(nonExpressionColNames, sampleName);
+    testExpression <- expression[, colIndexes, drop=F]
     
-#     predparams <- list(mis=gis, center=clusterings, freq=kfreq, fil=kLocalFilters, g2pmap=g2pmap, getEData=getExpressionData)
-#     return(list(topmis=topMis, predparams=predparams)
+    ######### vote by top k GIS #########
+    voteForPos <- 0
+    for(gisIndex in 1:k){
+      
+      #     predparams <- list(mis=gis, center=clusterings, freq=kfreq, fil=kLocalFilters, g2pmap=g2pmap, getEData=getExpressionData)
+      #     return(list(topmis=topMis, predparams=predparams)
+      
+      probes <- topmis[[gisIndex]]$representative.probes
+      centers <- topmis[[gisIndex]]$centers
+      freq <- topmis[[gisIndex]]$freq
+      
+      #     centers <- params$center[[gisIndex]]
+      #     freq <- params$freq[[gisIndex]]
+      
+      vpForCurrent <-  vote(probes, testExpression, centers, freq)
+      #print(vpForCurrent)
+      
+      voteForPos <- voteForPos + vpForCurrent
+    }
     
-    probes <- topmis[[gisIndex]]$representative.probes
-    centers <- topmis[[gisIndex]]$centers
-    freq <- topmis[[gisIndex]]$freq
+    prediction <- NA
+    voteForNeg <- k-voteForPos
+    if(voteForPos > voteForNeg){
+      prediction <- cls$pos
+    }  else if(voteForPos < voteForNeg){
+      prediction <- cls$neg
+    } else {
+      stop("Binary voting needed.")
+    }
     
-#     centers <- params$center[[gisIndex]]
-#     freq <- params$freq[[gisIndex]]
+    return(c(cls=prediction, vote=voteForPos/k))
     
-    vpForCurrent <-  vote(probes, expression, centers, freq)
-    #print(vpForCurrent)
-    
-    voteForPos <- voteForPos + vpForCurrent
-  }
+  })
   
-  prediction <- NA
-  voteForNeg <- k-voteForPos
-  if(voteForPos > voteForNeg){
-    prediction <- cls$pos
-  }  else if(voteForPos < voteForNeg){
-    prediction <- cls$neg
-  } else {
-    stop("Binary voting needed.")
-  }
-
-  return(prediction)
+  predictedClasses = predictions[1,]
+  predictedVotes = setNames(as.numeric(predictions[2,]), names(predictions[2,]))
+  return(list(cls=predictedClasses,vote=predictedVotes))
   
 }

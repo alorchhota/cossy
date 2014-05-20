@@ -27,9 +27,8 @@ cls <- readClass(clsfile=clsfile)
 kegg <- readGmtFile(gmtfile)
 
 ## You may like to separate training and test data.
-## Note: the predict function works for only one sample.
 
-testSampleNumber <- 1
+testSampleNumber <- c(1,34)
 trdata <- exdata[,-(2+testSampleNumber)]
 trclass <- cls[-testSampleNumber,,drop=F]
 
@@ -54,7 +53,6 @@ print(topgenes)
 
 
 ## predict test data using the trained cossy model.
-## Note: the predict function works for only one sample.
 
 # data with only the test sample
 tsdata <- exdata[,c(1,2,2+testSampleNumber, ncol(exdata))]  
@@ -65,6 +63,6 @@ tsdata <- preprocessTestExpression(preprocessObj=preprocobj, expression=tsdata)$
 
 # predict test sample and show output
 prediction <- predict(cossyobj=csy,expression=tsdata)
-print(paste0("Actual Class: ", tsclass[1,'class'], "; Predicted Class: ", prediction))
+print(paste0("Actual Class: ", tsclass[,'class'], "; Predicted Class: ", prediction$cls))
 
 print(Sys.time())
