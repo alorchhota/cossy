@@ -162,13 +162,17 @@ cossy <- function(expression, cls, misset, nmis=5){
   initial_gene_sets <- misset
   k <- nmis
   
-  mergeThreshold <- 0.6
   n.threshold.local <- 5
   
   ## if useEntrypyPvalue is True, then pavalue of entropy is calculated
   ## using permutation test (changing class labels 1000 times randomly)
   ## otherwise, normal entropy value is used.
   useEntrypyPvalue <- F
+  
+  ## if mergeGeneSets is True, then gene sets (MISs) are merged first.
+  mergeGeneSets <- F
+  mergeThreshold <- 0.6
+  
   
   ################ filter to remove expression data with no kegg id (kegg id="-") ################
   hasKid <- !(regexpr("-",raw_expression$kid)>0)
@@ -239,8 +243,8 @@ cossy <- function(expression, cls, misset, nmis=5){
   kfreq <- list()
   kLocalFilters <- list()
   
-  ###### merge functions #######
-  mergeGisSets <- function(allGis, expression){
+  ###### process and merge functions #######
+  processGisSets <- function(allGis, expression, merge=T){
     
     ### find pairwise intersection score of all gis
     
@@ -264,7 +268,7 @@ cossy <- function(expression, cls, misset, nmis=5){
     #   if(ngis == 0){
     #     return(list(gis=c(), filters=c()))
     #   }
-    if(ngis <= 1){
+    if(ngis <= 1 || merge==F){
       return(list(gis=allGis, filters=allFilters))
     }
     
@@ -644,9 +648,9 @@ cossy <- function(expression, cls, misset, nmis=5){
   
   ################# prepare filter for feature selection #################
   # initialize gene sets
-  merged_gene_sets <- mergeGisSets(initial_gene_sets, trainingExpression) 
-  gene_sets <- merged_gene_sets$gis
-  set_filters <- merged_gene_sets$filters  
+  processed_gene_sets <- processGisSets(initial_gene_sets, trainingExpression, mergeGeneSets) 
+  gene_sets <- processed_gene_sets$gis
+  set_filters <- processed_gene_sets$filters
   
   
   if(length(gene_sets) < k){
