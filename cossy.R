@@ -165,6 +165,11 @@ cossy <- function(expression, cls, misset, nmis=5){
   mergeThreshold <- 0.6
   n.threshold.local <- 5
   
+  ## if useEntrypyPvalue is True, then pavalue of entropy is calculated
+  ## using permutation test (changing class labels 1000 times randomly)
+  ## otherwise, normal entropy value is used.
+  useEntrypyPvalue <- F
+  
   ################ filter to remove expression data with no kegg id (kegg id="-") ################
   hasKid <- !(regexpr("-",raw_expression$kid)>0)
   
@@ -445,14 +450,14 @@ cossy <- function(expression, cls, misset, nmis=5){
   hclustCluster <- function(data, noOfClusters, trainingClasses){
     #### cluster #####
     if(ncol(data) < n.threshold.local){
-      return(list(NA, NA, .Machine$integer.max, NA, 1))
+      return(list(NA, NA, .Machine$integer.max, NA))
     }
     
     
     #d <- getDistanceMatrix(data=data, method="euclidean")
     d <- dist(data, method="euclidean")
     
-    fit <- hclust(d,method="ward.D")
+    fit <- hclust(d,method="ward")
     clusters <- cutree(fit, k=noOfClusters)
     
     splitData <- split(as.data.frame(data), clusters)
@@ -472,24 +477,26 @@ cossy <- function(expression, cls, misset, nmis=5){
     
     #### calculate p-value of entropy ####
     #### by permutating class labels 1000 times ####
-    
-    randomEntropy <- function(clusters, trainingClasses){
-      # randomize training labels
-      nlabels <- nrow(trainingClasses) 
-      randomClasses <- trainingClasses[sample(1:nlabels, size=nlabels, replace=F),,drop=F]
-      classFrequencyInClusters <- countSamplesInClsters(clusters, randomClasses)
-      ent <- entropy(classFrequencyInClusters)
-      return(ent)
+    if(useEntrypyPvalue){
+      randomEntropy <- function(clusters, trainingClasses){
+        # randomize training labels
+        nlabels <- nrow(trainingClasses) 
+        randomClasses <- trainingClasses[sample(1:nlabels, size=nlabels, replace=F),,drop=F]
+        classFrequencyInClusters <- countSamplesInClsters(clusters, randomClasses)
+        ent <- entropy(classFrequencyInClusters)
+        return(ent)
+      }
+      
+      randomEntropies <- sapply(1:1000, function(i){
+        randomEntropy(clusters, trainingClasses)
+      })
+      
+      den = density(randomEntropies, from=0, to=1)
+      pval = sum(den$y[den$x<=ent])/sum(den$y)
+      ent = pval
     }
     
-    randomEntropies <- sapply(1:1000, function(i){
-      randomEntropy(clusters, trainingClasses)
-    })
-    
-    den = density(randomEntropies, from=0, to=1)
-    pval = sum(den$y[den$x<=ent])/sum(den$y)
-    
-    return(list(centers, classFrequencyInClusters, ent, clusters, pval))
+    return(list(centers, classFrequencyInClusters, ent, clusters))
   }
   
   countSamplesInClsters_v0 <- function(clusters, classes){
@@ -650,10 +657,10 @@ cossy <- function(expression, cls, misset, nmis=5){
   expressionValColIndexes <- !colnames(trainingExpression) %in% c("name","description", "kid");
   
   setIndex <- 0   
-  print(length(gene_sets))
+  #print(length(gene_sets))
   for(set in gene_sets){
     setIndex <- setIndex + 1
-    print(setIndex)
+    #print(setIndex)
     
     lfil <- set_filters[,setIndex]
     setExpression <- getExpressionValues(trainingExpression[lfil$probes,], expressionValColIndexes)
@@ -670,7 +677,7 @@ cossy <- function(expression, cls, misset, nmis=5){
     clusterResult <- entropyCluster(setExpression, NoOfClusters, trainingClasses)
     clusterCenters <- clusterResult[[1]]
     classFrequencyInClusters <- clusterResult[[2]]
-    ent <- clusterResult[[5]]
+    ent <- clusterResult[[3]]
     
     #### sort and take top k ####
     clusterings[[length(clusterings)+1]] <- clusterCenters

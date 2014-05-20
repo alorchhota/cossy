@@ -13,3 +13,6 @@
 # data and data folder
 data
 .RData
+
+# results
+results

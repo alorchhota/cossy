@@ -43,7 +43,7 @@ trdata <- preprocobj$expression
 
 ## build cossy model
 
-csy <- cossy(expression=trdata, cls=trclass, misset=kegg, nmis=5)
+csy <- cossy(expression=trdata, cls=trclass, misset=kegg, nmis=15)
 
 
 ## get the top genes
