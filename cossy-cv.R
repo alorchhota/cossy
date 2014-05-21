@@ -46,8 +46,8 @@ cvresults <- lapply(1:n.fold, function(fold){
   print(paste("fold", fold))
   
   ## separate training and test data.
-  testSampleNumber <- randomizedSamples[fold.start[fold]:fold.start[fold+1]-1]
-  trdata <- exdata[,-(2+testSampleNumber)]
+  testSampleNumber <- randomizedSamples[fold.start[fold]:(fold.start[fold+1]-1)]
+  trdata <- exdata[,-(2+testSampleNumber),drop=F]
   trclass <- cls[-testSampleNumber,,drop=F]
   
   ## If your data is not pre-processed (i.e. not normalized or not z-transformed), 
@@ -73,7 +73,7 @@ cvresults <- lapply(1:n.fold, function(fold){
   ## predict test data using the trained cossy model.
   
   # data with only the test sample
-  tsdata <- exdata[,c(1,2,2+testSampleNumber, ncol(exdata))]  
+  tsdata <- exdata[,c(1,2,2+testSampleNumber, ncol(exdata)),drop=F]  
   tsclass <- cls[testSampleNumber,,drop=F]
   
   # perform the same preprocessing on test data before prediction
@@ -90,7 +90,7 @@ cvresults <- lapply(1:n.fold, function(fold){
 predictedClasses <- rep("", n.samples)
 predictedVotes <- rep(-1, n.samples)
 for(fold in 1:n.fold){
-  testSampleNumber <- randomizedSamples[fold.start[fold]:fold.start[fold+1]-1]
+  testSampleNumber <- randomizedSamples[fold.start[fold]:(fold.start[fold+1]-1)]
   predictedClasses[testSampleNumber] <- cvresults[[fold]]$cls
   predictedVotes[testSampleNumber] <- cvresults[[fold]]$vote
 }

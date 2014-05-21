@@ -814,8 +814,8 @@ predict <- function(cossyobj, expression){
     
   })
   
-  predictedClasses = predictions[1,]
-  predictedVotes = setNames(as.numeric(predictions[2,]), names(predictions[2,]))
+  predictedClasses = setNames(predictions[1,],sampleNames)
+  predictedVotes = setNames(as.numeric(predictions[2,]), sampleNames)
   return(list(cls=predictedClasses,vote=predictedVotes))
   
 }
