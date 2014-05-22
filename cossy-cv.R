@@ -2,11 +2,13 @@
 
 ## load cossy functions
 source('cossy.R')
+options(warn=2)
 
 ## settings
-dataset = "cns"     # name of the dataset
-network = "kegg"    # name of the network
-n.fold = 34         # #fold in cross validation
+dataset = "prostate3"                       # name of the dataset
+network = "pathwayapi_clustersone"    # name of the network
+n.fold = 10                           # #fold in cross validation
+n.mis = 15                        # #topmis to vote
 
 print(Sys.time())
 
@@ -60,7 +62,7 @@ cvresults <- lapply(1:n.fold, function(fold){
   
   ## build cossy model
   
-  csy <- cossy(expression=trdata, cls=trclass, misset=kegg, nmis=15)
+  csy <- cossy(expression=trdata, cls=trclass, misset=kegg, nmis=n.mis)
   
   
   ## get the top genes
@@ -97,6 +99,6 @@ for(fold in 1:n.fold){
 
 accuracy <- sum(as.character(cls[,1]) == predictedClasses) / n.samples
 
-print(paste0("Accuracy: ", format(accuracy*100, digits=2, nsmall=2), " %"))
+print(paste0(dataset, "(n.mis=", n.mis, ") Accuracy: ", format(accuracy*100, digits=2, nsmall=2), " %"))
 
 print(Sys.time())
