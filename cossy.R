@@ -31,7 +31,65 @@ readClass <- function(clsfile){
   data.frame(class=cls[!is.na(cls)])  # remove NA to avoid ending spaces
 }
 
-preprocessTrainingExpression <- function(expression, qnorm=T, ztrans=T){
+fuzzyRankNormalize <- function(expressionData, frank){
+  ## frank parameter can be a logical value or a vector of 2 numbers (theta1 & theta2)
+  ## for detail about frank, see the following paper:
+  ## Lim,K. and Wong,L. (2014) Finding consistent disease subnetworks using PFSNet. Bioinformatics, 30, 189–96.
+  
+  doFrankNormalization <- F
+  theta1 <- -1
+  theta2 <- -1
+  
+  if(is.logical(frank) && length(frank)==1){
+    doFrankNormalization <- frank
+    theta1 <- 0.05
+    theta2 <- 0.15
+  }
+  else if(is.numeric(frank) && length(frank)==2){
+    doFrankNormalization <- T
+    theta1 <- frank[1]
+    theta2 <- frank[2]
+  }
+  else{
+    stop('frank must be a logical value or a numeric vector of length 2.')
+  }
+  
+  ## return the same data if fuzzy ranking is not done.
+  if(!doFrankNormalization){
+    return(data)
+  }
+  
+  ##### fuzzy ranking of one sample #####
+  # inputs:
+  #   sampleExpression : an array of expression values
+  # outputs:
+  #   rankedExpression : an array of ranked expression values
+  
+  oneSampleFRank <- function(sampleExpression, theta1, theta2){
+    thresholds <- quantile(x=sampleExpression,  probs=c(theta2, 1-theta1))
+    
+    if(thresholds[1] >= thresholds[2])
+      stop('Higher threshold must be greater than lower threshold. Please check theta1 and theta2 values.')
+    
+    zeroValues <- (sampleExpression <= thresholds[1])
+    oneValues <- (sampleExpression >= thresholds[2])
+    midValues <- !(zeroValues | oneValues)
+    
+    sampleExpression[zeroValues] <- 0
+    sampleExpression[oneValues] <- 1
+    sampleExpression[midValues] <- (sampleExpression[midValues] - thresholds[1])/(thresholds[2]-thresholds[1])
+    return(sampleExpression)
+    
+  }
+  
+  ## normalize all the samples
+  normalizedData <- apply(expressionData, 2, oneSampleFRank, theta1, theta2)
+  return(normalizedData)
+  
+}
+
+
+preprocessTrainingExpression <- function(expression, frank=F, qnorm=T, ztrans=T){
   
   ## This file customize the function normalizeQuantiles function from limma package.
   ## customQuantileNormalize function normalizes the dataset keeping one test sample out (for loocv),
@@ -90,9 +148,12 @@ preprocessTrainingExpression <- function(expression, qnorm=T, ztrans=T){
   nc <- ncol(expression)
   gdata <- expression[,-c(1,2,nc), drop=F]
   
+  gdata <- fuzzyRankNormalize(gdata, frank)
+  
   quantiles <- NA
   centers <- NA
   scales <- NA
+  
   
   if(qnorm){
     qn <- customQuantileNormalize(gdata)
@@ -113,7 +174,7 @@ preprocessTrainingExpression <- function(expression, qnorm=T, ztrans=T){
   processedExpression <- data.frame(expression[,c(1,2)], gdata[,], expression$kid, stringsAsFactors=F)
   colnames(processedExpression) <- colnames(expression)
   
-  return(list(expression=processedExpression, qnorm.quantiles=quantiles, ztrans.centers=centers, ztrans.scales=scales))
+  return(list(expression=processedExpression, qnorm.quantiles=quantiles, ztrans.centers=centers, ztrans.scales=scales, frank=frank))
 }
 
 preprocessTestExpression <- function(preprocessObj, expression){
@@ -136,6 +197,9 @@ preprocessTestExpression <- function(preprocessObj, expression){
   
   nc <- ncol(expression)
   testData <- expression[,-c(1,2,nc), drop=F]
+  
+  testData <-  fuzzyRankNormalize(testData, preprocessObj$frank)
+  
   if(!(length(preprocessObj$qnorm.quantiles)==1 && is.na(preprocessObj$qnorm.quantiles))){
     for(j in 1:ncol(testData)){
       testData[,j]  <- customSampleQuantileNormalize(as.vector(testData[,j]), preprocessObj$qnorm.quantiles)
@@ -622,6 +686,13 @@ cossy <- function(expression, cls, misset, nmis=5){
       negVal <- as.numeric(row[classLables==negativeClass])
       iqrVal <- iqr.test(x=negVal, y=posVal)
       return(abs(iqrVal))
+      
+      ### use ttest pvalue for ranking genes
+      #if(length(unique(row)) == 1)
+      #  pval <- 1
+      #else
+      #  pval <- t.test(negVal, posVal)$p.value
+      #return(1-abs(pval))
     }
     
     scores <- apply(expVal, 1, ourIqrTest)

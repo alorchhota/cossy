@@ -5,10 +5,10 @@ source('cossy.R')
 options(warn=2)
 
 ## settings
-dataset = "prostate3"                       # name of the dataset
-network = "pathwayapi_clustersone"    # name of the network
+dataset = "cns"                       # name of the dataset
+network = "pathwayapi_cossy"    # name of the network
 n.fold = 10                           # #fold in cross validation
-n.mis = 15                        # #topmis to vote
+n.mis = 3                      # #topmis to vote
 
 print(Sys.time())
 
@@ -56,7 +56,7 @@ cvresults <- lapply(1:n.fold, function(fold){
   ## you can do so using preprocessTrainingExpression() function. 
   ## You may omit this step if your data is already processed.
   
-  preprocobj <- preprocessTrainingExpression(expression=trdata,qnorm=T,ztrans=T)
+  preprocobj <- preprocessTrainingExpression(expression=trdata, frank=T, qnorm=F,ztrans=F)
   trdata <- preprocobj$expression
   
   
