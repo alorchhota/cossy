@@ -541,6 +541,8 @@ cossy <- function(expression, cls, misset, nmis=5){
     
     #### calculate entropy ####
     classFrequencyInClusters <- countSamplesInClsters(clusters, trainingClasses)
+    # normalize by dividing by total no of samples of each class
+    classFrequencyInClusters <- normalizeClusterFrequency(classFrequencyInClusters)
     ent <- entropy(classFrequencyInClusters)
     
     #### calculate p-value of entropy ####
@@ -551,6 +553,7 @@ cossy <- function(expression, cls, misset, nmis=5){
         nlabels <- nrow(trainingClasses) 
         randomClasses <- trainingClasses[sample(1:nlabels, size=nlabels, replace=F),,drop=F]
         classFrequencyInClusters <- countSamplesInClsters(clusters, randomClasses)
+        classFrequencyInClusters <- normalizeClusterFrequency(classFrequencyInClusters)
         ent <- entropy(classFrequencyInClusters)
         return(ent)
       }
@@ -593,8 +596,6 @@ cossy <- function(expression, cls, misset, nmis=5){
   }
   
   entropy <- function(frequencyInCluster){
-    # normalize by dividing by total no of samples of each class
-    frequencyInCluster <- normalizeClusterFrequency(frequencyInCluster)
     
     #calculate the entropy of each cluster
     clusterEntropy <- function(npos, nneg){
@@ -826,8 +827,11 @@ predict <- function(cossyobj, expression){
     
     sampleExpression <- (t(testSamplesExpression[,1]))[1,]
     
-    # find the colsest cluster index
+    ## find cluster distances
     distances <- apply(clusterCenters, 1, function(center) euclideanDitance(center, sampleExpression))
+    
+    ###### weighted vote ######
+    # find the colsest cluster index
     closestCluster <- which.min(distances)
     
     # count no of pos and neg samples in the colses center
