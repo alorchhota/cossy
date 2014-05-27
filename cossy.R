@@ -56,7 +56,7 @@ fuzzyRankNormalize <- function(expressionData, frank){
   
   ## return the same data if fuzzy ranking is not done.
   if(!doFrankNormalization){
-    return(data)
+    return(expressionData)
   }
   
   ##### fuzzy ranking of one sample #####
@@ -100,9 +100,9 @@ preprocessTrainingExpression <- function(expression, frank=F, qnorm=T, ztrans=T)
   {
     n <- dim(A)
     if (is.null(n)) 
-      return(A)
+      stop('Error in quantile normalization: Matrix dimension is null.')
     if (n[2] == 1) 
-      return(A)
+      stop('Error in quantile normalization: At least two samples required.')
     O <- S <- array(, n)
     nobs <- rep(n[1], n[2])
     i <- (0:(n[1] - 1))/(n[1] - 1)
@@ -839,8 +839,27 @@ predict <- function(cossyobj, expression){
     nneg <- freqInCluster[as.character(closestCluster), "neg"]
     
     # vote
-    voteForPos <-  npos / (npos + nneg)
-    return(voteForPos)
+    weightedVoteForPos <-  npos / (npos + nneg)
+    
+    ##### binary vote #####
+    ##### find the first unequal closest cluster and vote the majority class in that cluster
+    # order clusters according to distanes
+    orderedClusters <- order(distances)
+    
+    # get frequencies in the clusters
+    nposs <- freqInCluster[as.character(orderedClusters), "pos"]
+    nnegs <- freqInCluster[as.character(orderedClusters), "neg"]
+    
+    # find which clusters have unequal number of samples in a cluster
+    unequalClusters <- which(nposs!=nnegs)
+    if(length(unequalClusters)==0)
+      stop('Binary voting is not possible: Every cluster contains the same number of samples.')
+    firstUnequalCluster <- unequalClusters[1]
+    
+    # vote to the majority class
+    binaryVoteForPos <- ifelse(nposs[firstUnequalCluster] > nnegs[firstUnequalCluster], 1, 0)
+    
+    return(list(weighted=weightedVoteForPos, binary=binaryVoteForPos))
   }
   
   euclideanDitance <- function(p1, p2){
@@ -856,36 +875,40 @@ predict <- function(cossyobj, expression){
     testExpression <- expression[, colIndexes, drop=F]
     
     ######### vote by top k GIS #########
-    voteForPos <- 0
+    weightedVoteForPos <- 0
+    binaryVoteForPos <- 0
     for(gisIndex in 1:k){
-      
-      #     predparams <- list(mis=gis, center=clusterings, freq=kfreq, fil=kLocalFilters, g2pmap=g2pmap, getEData=getExpressionData)
-      #     return(list(topmis=topMis, predparams=predparams)
       
       probes <- topmis[[gisIndex]]$representative.probes
       centers <- topmis[[gisIndex]]$centers
       freq <- topmis[[gisIndex]]$freq
+  
+      # vote
+      votesForCurrent <-  vote(probes, testExpression, centers, freq)
+      weightedVForCurrent <- votesForCurrent$weighted
+      binaryVForCurrent <- votesForCurrent$binary
       
-      #     centers <- params$center[[gisIndex]]
-      #     freq <- params$freq[[gisIndex]]
-      
-      vpForCurrent <-  vote(probes, testExpression, centers, freq)
-      #print(vpForCurrent)
-      
-      voteForPos <- voteForPos + vpForCurrent
+      # sum of votes
+      weightedVoteForPos <- weightedVoteForPos + weightedVForCurrent
+      binaryVoteForPos <- binaryVoteForPos + binaryVForCurrent
     }
     
     prediction <- NA
-    voteForNeg <- k-voteForPos
-    if(voteForPos > voteForNeg){
-      prediction <- cls$pos
-    }  else if(voteForPos < voteForNeg){
-      prediction <- cls$neg
-    } else {
-      stop("Binary voting needed.")
+    finalVoteForPos <- NA
+    
+    weightedVoteForNeg <- k - weightedVoteForPos
+    if(weightedVoteForPos != weightedVoteForNeg){
+      prediction <- ifelse(weightedVoteForPos > weightedVoteForNeg, cls$pos, cls$neg)
+      finalVoteForPos <- weightedVoteForPos
+    }  else {
+      ##### Binary voting needed ####
+      print("binary votes!!!")
+      binaryVoteForNeg <- k - binaryVoteForPos 
+      prediction <- ifelse(binaryVoteForPos > binaryVoteForNeg, cls$pos, cls$neg)
+      finalVoteForPos <- binaryVoteForPos
     }
     
-    return(c(cls=prediction, vote=voteForPos/k))
+    return(c(cls=prediction, vote=finalVoteForPos/k))
     
   })
   
