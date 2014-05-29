@@ -917,3 +917,76 @@ predict <- function(cossyobj, expression){
   return(list(cls=predictedClasses,vote=predictedVotes))
   
 }
+
+#### cossy.v() is same as the cossy() except that 
+#### the final n.mis is selected in validation step.
+#### 'v' stands for validation.
+cossy.v <- function(expression, cls, misset, nmis=seq(1,15,2)){
+  
+  ## prepare the samples in each fold of cross validation
+  n.fold <- 10
+  n.samples <- nrow(cls)
+  randomizedSamples <- sample(1:n.samples, size=n.samples, replace=F)
+  n.samples.in.fold <- c(rep(floor(n.samples/n.fold), n.fold-n.samples%%n.fold), rep(floor(n.samples/n.fold)+1, n.samples%%n.fold))
+  fold.start <- cumsum(c(1,n.samples.in.fold))
+  
+  ## perform cross validation
+  cvresults <- lapply(1:n.fold, function(fold){
+    
+    ## show current fold number
+    print(paste("fold", fold))
+    
+    ## separate training and test data.
+    validationSampleNumber <- randomizedSamples[fold.start[fold]:(fold.start[fold+1]-1)]
+    trdata <- expression[,-(2+validationSampleNumber),drop=F]
+    trclass <- cls[-validationSampleNumber,,drop=F]
+    
+    
+    ## build cossy model
+    csy <- cossy(expression=trdata, cls=trclass, misset=kegg, nmis=max(nmis))
+    
+    
+    ## predict validation data using the trained cossy model.
+    vdata <- expression[,c(1,2,2+validationSampleNumber, ncol(expression)),drop=F]  
+    #vclass <- cls[validationSampleNumber,,drop=F]
+    
+    # predict test sample and show output
+    predictions <- lapply(nmis, function(nm){
+      csy1 <- csy
+      csy1$topmis <- csy1$topmis[1:nm]
+      prediction <- predict(cossyobj=csy1,expression=vdata)
+    })
+    
+    return(predictions)
+  })
+  
+  ## save all results sorted by original sample index
+  predictedClasses <- list()
+  for(nm in nmis){
+    predictedClasses[[as.character(nm)]] <- rep("", n.samples)
+  }
+  
+  for(fold in 1:n.fold){
+    validationSampleNumber <- randomizedSamples[fold.start[fold]:(fold.start[fold+1]-1)]
+    for(i in 1:length(nmis)){
+      nm = nmis[i]
+      predictedClasses[[as.character(nm)]][validationSampleNumber] <- cvresults[[fold]][[i]]$cls
+    }
+  }
+  
+  # get accuracies
+  accuracies <- sapply(nmis, function(nm){
+    #sum(as.character(cls[,1]) == predictedClasses) / n.samples
+    sum(as.character(cls[,1]) == predictedClasses[[as.character(nm)]]) / n.samples
+  })
+  
+  # find #mis corresponding to max accuracy
+  misIndex <- which.max(accuracies)
+  final.nmis <- nmis[misIndex]
+  
+  print(sort(accuracies, decreasing=T))
+  
+  ## return the model using final.nmis
+  return(cossy(expression, cls, misset, final.nmis))
+  
+}
