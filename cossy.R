@@ -786,8 +786,8 @@ cossy <- function(expression, cls, misset, nmis=5){
     geneNames <- getSingleKidPerProbe(expression, allProbes) ## kids are always gene ids
     representativeGeneNames <- getSingleKidPerProbe(expression, lfil$probes) ## kids are always gene ids
     
-    mis <- list(objects=gis$gene, 
-                pathway=gis$name, 
+    mis <- list(objects=gis$gene,
+                pathway=gis$name,
                 probes=allProbes,
                 genes=geneNames,
                 #profiles=gisProfiles,
@@ -902,7 +902,7 @@ predict <- function(cossyobj, expression){
       finalVoteForPos <- weightedVoteForPos
     }  else {
       ##### Binary voting needed ####
-      print("binary votes!!!")
+      #print("binary votes!!!")
       binaryVoteForNeg <- k - binaryVoteForPos 
       prediction <- ifelse(binaryVoteForPos > binaryVoteForNeg, cls$pos, cls$neg)
       finalVoteForPos <- binaryVoteForPos
@@ -934,7 +934,7 @@ cossy.v <- function(expression, cls, misset, nmis=seq(1,15,2)){
   cvresults <- lapply(1:n.fold, function(fold){
     
     ## show current fold number
-    print(paste("fold", fold))
+    print(paste("validation fold", fold))
     
     ## separate training and test data.
     validationSampleNumber <- randomizedSamples[fold.start[fold]:(fold.start[fold+1]-1)]
@@ -984,7 +984,7 @@ cossy.v <- function(expression, cls, misset, nmis=seq(1,15,2)){
   misIndex <- which.max(accuracies)
   final.nmis <- nmis[misIndex]
   
-  print(sort(accuracies, decreasing=T))
+  #print(sort(accuracies, decreasing=T))
   
   ## return the model using final.nmis
   return(cossy(expression, cls, misset, final.nmis))
