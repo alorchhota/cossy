@@ -5,13 +5,14 @@ source('cossy.R')
 options(warn=2)
 
 ## settings
-dataset = "dlbcl"                       # name of the dataset
+dataset = "leukemia"                       # name of the dataset
 network = "pathwayapi_clusterone"    # name of the network
-n.fold = 10                           # #fold in cross validation
-n.mis = 0                      # #topmis to vote
+n.fold = 10                   # #fold in cross validation
+one.se = F                    # n.mis is selected based on one standard error rule
+mis.consistency = T           # consistent miss are used in validation step
 
 print(Sys.time())
-
+print(paste(dataset, network, 'one.se:', one.se, 'mis.consistency:',mis.consistency))
 set.seed(101)
 
 # Firstly, you will need to prepare 2 or 3 files (*.gct, *.cls, and *.chip) depending on your situation. 
@@ -62,14 +63,14 @@ cvresults <- lapply(1:n.fold, function(fold){
   
   ## build cossy model
   
-  csy <- cossy.v(expression=trdata, cls=trclass, misset=kegg, nmis=seq(1,31,2))
+  csy <- cossy.v(expression=trdata, cls=trclass, misset=kegg, nmis=seq(1,31,2), one.se=one.se, mis.consistency=mis.consistency)
   print(paste('final.nmis =', length(csy$topmis)))
   
   ## get the top genes
   
-  #topgenes <- sapply(csy$topmis, function(mis){return(mis$representative.genes)})
-  #topgenes <- t(topgenes)
-  #print(topgenes)
+  topgenes <- sapply(csy$topmis, function(mis){return(mis$representative.genes)})
+  topgenes <- t(topgenes)
+  print(topgenes)
   
   
   ## predict test data using the trained cossy model.
@@ -99,6 +100,6 @@ for(fold in 1:n.fold){
 
 accuracy <- sum(as.character(cls[,1]) == predictedClasses) / n.samples
 
-print(paste0(dataset, "(n.mis=", n.mis, ") Accuracy: ", format(accuracy*100, digits=2, nsmall=2), " %"))
+print(paste0(dataset, " Accuracy: ", format(accuracy*100, digits=2, nsmall=2), " %"))
 
 print(Sys.time())

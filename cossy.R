@@ -219,7 +219,7 @@ preprocessTestExpression <- function(preprocessObj, expression){
   
 }
 
-cossy <- function(expression, cls, misset, nmis=5){
+cossy <- function(expression, cls, misset, nmis=5, pval.ent=F){
   
   raw_expression <- expression
   classes <- cls
@@ -231,11 +231,13 @@ cossy <- function(expression, cls, misset, nmis=5){
   ## if useEntrypyPvalue is True, then pavalue of entropy is calculated
   ## using permutation test (changing class labels 1000 times randomly)
   ## otherwise, normal entropy value is used.
-  useEntrypyPvalue <- F
+  useEntrypyPvalue <- pval.ent
   
   ## if mergeGeneSets is True, then gene sets (MISs) are merged first.
   mergeGeneSets <- F
   mergeThreshold <- 0.6
+  
+  significanceTestName <- 'ttest'  ## option: 'iqr', 'ttest'
   
   
   ################ filter to remove expression data with no kegg id (kegg id="-") ################
@@ -318,7 +320,7 @@ cossy <- function(expression, cls, misset, nmis=5){
     allFilters <- sapply(allGis, function(gis){
       setExpression <- getExpressionData(trainingExpression, gis, onlyValues=FALSE)
       #passedGis <<- c(passedGis,(nrow(setExpression) >= n.threshold.local))
-      lfil <- localNGeneFilter(setExpression, classLables=trainingClasses, positiveClass=positiveClass, negativeClass=negativeClass, threshold=n.threshold.local)
+      lfil <- localNGeneFilter(setExpression, classLables=trainingClasses, positiveClass=positiveClass, negativeClass=negativeClass, threshold=n.threshold.local, test=significanceTestName)
       return(lfil)
     })
     
@@ -326,7 +328,7 @@ cossy <- function(expression, cls, misset, nmis=5){
     gisLength <- sapply(allFilters['probes',], length)
     passedGis <- gisLength >= n.threshold.local
     allGis <- allGis[passedGis]
-    allFilters <- allFilters[,passedGis]
+    allFilters <- allFilters[,passedGis,drop=F]
     
     ngis <- length(allGis)
     #   if(ngis == 0){
@@ -423,7 +425,7 @@ cossy <- function(expression, cls, misset, nmis=5){
       candidateProbes <- unique(c(allFilters[,mergeIndexes[1]]$probes, allFilters[,mergeIndexes[2]]$probes))
       mergedSetExpression <- getExpressionValues(trainingExpression[candidateProbes,])
       
-      mergedFilter <- localNGeneFilter(mergedSetExpression, classLables=trainingClasses, positiveClass=positiveClass, negativeClass=negativeClass, threshold=n.threshold.local)
+      mergedFilter <- localNGeneFilter(mergedSetExpression, classLables=trainingClasses, positiveClass=positiveClass, negativeClass=negativeClass, threshold=n.threshold.local, test=significanceTestName)
       newAllFilters <- cbind(allFilters,mergedFilter)
       
       rm(allFilters)
@@ -663,7 +665,10 @@ cossy <- function(expression, cls, misset, nmis=5){
     return(expression[rowIndexes, colIndexes, drop=FALSE])
   }
   
-  localNGeneFilter <- function(expression, classLables, positiveClass, negativeClass, threshold=5){
+  localNGeneFilter <- function(expression, classLables, positiveClass, negativeClass, threshold=5, test='iqr'){
+    
+    ## if test='iqr', do iqr-test as described in plos-one cossy paper
+    ## if test='ttest' use pvalue of ttest
     
     expVal <- getExpressionValues(expression)
     
@@ -682,21 +687,35 @@ cossy <- function(expression, cls, misset, nmis=5){
       return(score)
     }
     
-    ourIqrTest <- function(row){
+    significanceTest <- function(row){
       posVal <- as.numeric(row[classLables==positiveClass])
       negVal <- as.numeric(row[classLables==negativeClass])
-      iqrVal <- iqr.test(x=negVal, y=posVal)
-      return(abs(iqrVal))
       
-      ### use ttest pvalue for ranking genes
-      #if(length(unique(row)) == 1)
-      #  pval <- 1
-      #else
-      #  pval <- t.test(negVal, posVal)$p.value
-      #return(1-abs(pval))
+      if(test=='iqr'){
+        ## use iqr-test as described in plos-one cossy paper
+        iqrVal <- iqr.test(x=negVal, y=posVal)
+        return(abs(iqrVal))
+      }
+      
+      if(test=='ttest'){
+        ## use ttest pvalue for ranking genes
+        if(length(unique(row)) == 1)
+          pval <- 1
+        else{
+          ## take the lower p-value of two one-sided t-tests
+          pval1 <- t.test(negVal, posVal, alternative='greater')$p.value
+          pval2 <- t.test(negVal, posVal, alternative='less')$p.value
+          pval <- min(pval1, pval2)
+        }
+          
+        return(1-abs(pval))
+      }
+      
+      stop('Invalid value for \'test\' attribute.')
+
     }
     
-    scores <- apply(expVal, 1, ourIqrTest)
+    scores <- apply(expVal, 1, significanceTest)
     scores <- as.vector(scores)
     ord <- order(scores,decreasing=TRUE,na.last=NA)
     fil <- rep(FALSE, length(scores))
@@ -788,13 +807,15 @@ cossy <- function(expression, cls, misset, nmis=5){
     
     mis <- list(objects=gis$gene,
                 pathway=gis$name,
+                subnetid=gis$id,
                 probes=allProbes,
                 genes=geneNames,
                 #profiles=gisProfiles,
                 representative.probes=lfil$probes,
                 representative.genes=representativeGeneNames,
                 centers=centers,
-                freq=freq)
+                freq=freq,
+                ent=entropy(freq))
     
     
     topMis[[length(topMis)+1]] <- mis
@@ -921,7 +942,21 @@ predict <- function(cossyobj, expression){
 #### cossy.v() is same as the cossy() except that 
 #### the final n.mis is selected in validation step.
 #### 'v' stands for validation.
-cossy.v <- function(expression, cls, misset, nmis=seq(1,15,2)){
+cossy.v <- function(expression, cls, misset, nmis=seq(1,15,2), one.se=T, mis.consistency=T){
+  
+  ## if flexibleMaxAccuracy == F, use the 'n.mis' that produces maximum accuracy in cross validation step.
+  ## if flexibleMaxAccuracy == T, use a flexible simple model. Instead of selecting 'n.mis' with max accuracy,
+  ## select 'n.mis' whose accuracy is >= MaxAccuracy - one_standard_error(accuracy)
+  flexibleMaxAccuracy = one.se
+  
+  ## if useConsistentMiss = F, cossy.v calls cossy() after cross validation using whole misset
+  ## if useConsistentMiss = T, cossy.v calls cossy() after cross validation using most consistent miss in cv
+  useConsistentMiss = mis.consistency
+  
+  ## if pval.ent determines if parameter of cossy() callling after cross validation
+  pval.ent <- F
+  
+  nmis <- sort(nmis, decreasing=F)
   
   ## prepare the samples in each fold of cross validation
   n.fold <- 10
@@ -931,7 +966,7 @@ cossy.v <- function(expression, cls, misset, nmis=seq(1,15,2)){
   fold.start <- cumsum(c(1,n.samples.in.fold))
   
   ## perform cross validation
-  cvresults <- lapply(1:n.fold, function(fold){
+  foldValidation <- function(fold){
     
     ## show current fold number
     print(paste("validation fold", fold))
@@ -943,7 +978,7 @@ cossy.v <- function(expression, cls, misset, nmis=seq(1,15,2)){
     
     
     ## build cossy model
-    csy <- cossy(expression=trdata, cls=trclass, misset=kegg, nmis=max(nmis))
+    csy <- cossy(expression=trdata, cls=trclass, misset=kegg, nmis=max(nmis), pval.ent=F)
     
     
     ## predict validation data using the trained cossy model.
@@ -957,8 +992,10 @@ cossy.v <- function(expression, cls, misset, nmis=seq(1,15,2)){
       prediction <- predict(cossyobj=csy1,expression=vdata)
     })
     
-    return(predictions)
-  })
+    return(list(model=csy, predictions=predictions))
+  }
+  
+  cvresults <- lapply(1:n.fold, foldValidation)
   
   ## save all results sorted by original sample index
   predictedClasses <- list()
@@ -970,7 +1007,7 @@ cossy.v <- function(expression, cls, misset, nmis=seq(1,15,2)){
     validationSampleNumber <- randomizedSamples[fold.start[fold]:(fold.start[fold+1]-1)]
     for(i in 1:length(nmis)){
       nm = nmis[i]
-      predictedClasses[[as.character(nm)]][validationSampleNumber] <- cvresults[[fold]][[i]]$cls
+      predictedClasses[[as.character(nm)]][validationSampleNumber] <- cvresults[[fold]]$predictions[[i]]$cls
     }
   }
   
@@ -980,13 +1017,72 @@ cossy.v <- function(expression, cls, misset, nmis=seq(1,15,2)){
     sum(as.character(cls[,1]) == predictedClasses[[as.character(nm)]]) / n.samples
   })
   
-  # find #mis corresponding to max accuracy
-  misIndex <- which.max(accuracies)
-  final.nmis <- nmis[misIndex]
+  if(!flexibleMaxAccuracy){
+    # find #mis corresponding to max accuracy
+    misIndex <- which.max(accuracies)
+    final.nmis <- nmis[misIndex]
+  } else{
+    ## instead of choosing the global max, use a flexible simple model
+    ## find a simple model (using less #miss) whose accuracy is at least (MaxAccuracy - std.error(accuracy))
+    maxAcc <- max(accuracies)
+    sdAcc <- sd(accuracies)
+    thresholdAcc <- maxAcc-sdAcc/sqrt(n.fold-1)       #S.E. = stddev/sqrt(N-1)
+    misIndex <- which(accuracies >= thresholdAcc)[1]
+    final.nmis <- nmis[misIndex]
+  }
   
-  #print(sort(accuracies, decreasing=T))
+  print('Max(accuracies), accuracies:')
+  print(c(max(accuracies), accuracies))
   
-  ## return the model using final.nmis
-  return(cossy(expression, cls, misset, final.nmis))
+  
+  
+  missetSelected = NA
+  if(!useConsistentMiss){
+    missetSelected = misset
+  } else{
+    ###### select the most consistent miss from cross validation results. ######
+    ###### take the most frequent miss appeared in topmis[1:final.nmis] of all the folds
+    
+    # generate a vector of subnet ids appeared in topmis list
+    subnetAppearances <- lapply(1:n.fold, function(fold){
+      sapply(1:final.nmis, function(idx){
+        cvresults[[fold]]$model$topmis[[idx]]$subnetid
+      })
+    })
+    subnetAppearances <- unlist(subnetAppearances)
+    
+    # generate entropies of miss (subnetAppearances)
+    entropies <- lapply(1:n.fold, function(fold){
+      sapply(1:final.nmis, function(idx){
+        cvresults[[fold]]$model$topmis[[idx]]$ent
+      })
+    })
+    entropies <- unlist(entropies)
+    
+    # make a data frame with freq and entropy
+    subnetEntropies <- tapply(entropies, subnetAppearances, sum)
+    subnetFreq <- table(subnetAppearances)
+    subnets <- names(subnetFreq)
+    subnetData <- data.frame(subnet=subnets, freq=subnetFreq[subnets], ent=subnetEntropies[subnets], stringsAsFactors=F)
+    
+    # sort miss according to their frequency, then entropy
+    sortedSubnetData <- subnetData[with(subnetData, order(-freq, ent)), ]
+    #sortedSubnetFreq <- sort(table(subnetAppearances), decreasing=T)
+    
+    # find most consistent miss
+    #consistentSubnets <- names(sortedSubnetFreq[sortedSubnetFreq >= sortedSubnetFreq[final.nmis]])
+    consistentSubnets <- sortedSubnetData[1:final.nmis,'subnet']
+    print('consistentSubnets:')
+    print(consistentSubnets)
+    
+    # prepare the 'misset' input for cossy
+    misIds <- sapply(misset, function(mis) mis$id)
+    consistentMisIdx <- which(misIds %in% consistentSubnets)
+    missetSelected <- misset[consistentMisIdx]
+    
+  }
+  
+  ## return the model using (consistent) miss
+  return(cossy(expression, cls, missetSelected, final.nmis, pval.ent=pval.ent))
   
 }
