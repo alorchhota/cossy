@@ -219,7 +219,7 @@ preprocessTestExpression <- function(preprocessObj, expression){
   
 }
 
-cossy <- function(expression, cls, misset, nmis=5, pval.ent=F){
+cossy <- function(expression, cls, misset, nmis=5, pval.ent=F, sig.test='iqr'){
   
   raw_expression <- expression
   classes <- cls
@@ -237,7 +237,7 @@ cossy <- function(expression, cls, misset, nmis=5, pval.ent=F){
   mergeGeneSets <- F
   mergeThreshold <- 0.6
   
-  significanceTestName <- 'ttest'  ## option: 'iqr', 'ttest'
+  significanceTestName <- sig.test  ## option: 'iqr', 'ttest'
   
   
   ################ filter to remove expression data with no kegg id (kegg id="-") ################
@@ -942,7 +942,7 @@ predict <- function(cossyobj, expression){
 #### cossy.v() is same as the cossy() except that 
 #### the final n.mis is selected in validation step.
 #### 'v' stands for validation.
-cossy.v <- function(expression, cls, misset, nmis=seq(1,15,2), one.se=T, mis.consistency=T){
+cossy.v <- function(expression, cls, misset, nmis=seq(1,15,2), one.se=T, mis.consistency=T, sig.test='iqr'){
   
   ## if flexibleMaxAccuracy == F, use the 'n.mis' that produces maximum accuracy in cross validation step.
   ## if flexibleMaxAccuracy == T, use a flexible simple model. Instead of selecting 'n.mis' with max accuracy,
@@ -978,7 +978,7 @@ cossy.v <- function(expression, cls, misset, nmis=seq(1,15,2), one.se=T, mis.con
     
     
     ## build cossy model
-    csy <- cossy(expression=trdata, cls=trclass, misset=kegg, nmis=max(nmis), pval.ent=F)
+    csy <- cossy(expression=trdata, cls=trclass, misset=kegg, nmis=max(nmis), pval.ent=F, sig.test=sig.test)
     
     
     ## predict validation data using the trained cossy model.
@@ -1083,6 +1083,6 @@ cossy.v <- function(expression, cls, misset, nmis=seq(1,15,2), one.se=T, mis.con
   }
   
   ## return the model using (consistent) miss
-  return(cossy(expression, cls, missetSelected, final.nmis, pval.ent=pval.ent))
+  return(cossy(expression, cls, missetSelected, final.nmis, pval.ent=pval.ent, sig.test=sig.test))
   
 }
