@@ -1,0 +1,4 @@
+#exportPattern("^[[:alpha:]]+")
+export(readExpression, readClass, preprocessTrainingExpression, preprocessTestExpression, cossy, cossy.v, predict)
+
+import(utils, stats, limma, igraph)
