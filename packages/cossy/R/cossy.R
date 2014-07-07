@@ -810,7 +810,7 @@ cossy <- function(expression, cls, misset, nmis=5, pval.ent=F, sig.test='iqr'){
                 subnetid=gis$id,
                 probes=allProbes,
                 genes=geneNames,
-                #profiles=gisProfiles,
+                profiles=gisProfiles,
                 representative.probes=lfil$probes,
                 representative.genes=representativeGeneNames,
                 centers=centers,
