@@ -576,7 +576,7 @@ cossy <- function(expression, cls, misset, nmis=5, pval.ent=F, sig.test='iqr'){
     
     clustersWithClass <- data.frame(cluster=clusters, class=classes)
     
-    countSamplesInClsterscountClassSamplesInCluster <- function(cluster, class){
+    countClassSamplesInCluster <- function(cluster, class){
       sum(apply(clustersWithClass, 1, function(row) return(trim(row["cluster"])==cluster && trim(row["class"])==class)))
     }
     
@@ -969,7 +969,7 @@ cossy.v <- function(expression, cls, misset, nmis=seq(1,15,2), one.se=T, mis.con
   foldValidation <- function(fold){
     
     ## show current fold number
-    print(paste("validation fold", fold))
+    #print(paste("validation fold", fold))
     
     ## separate training and test data.
     validationSampleNumber <- randomizedSamples[fold.start[fold]:(fold.start[fold+1]-1)]
@@ -978,7 +978,7 @@ cossy.v <- function(expression, cls, misset, nmis=seq(1,15,2), one.se=T, mis.con
     
     
     ## build cossy model
-    csy <- cossy(expression=trdata, cls=trclass, misset=kegg, nmis=max(nmis), pval.ent=F, sig.test=sig.test)
+    csy <- cossy(expression=trdata, cls=trclass, misset=misset, nmis=max(nmis), pval.ent=F, sig.test=sig.test)
     
     
     ## predict validation data using the trained cossy model.
@@ -1031,8 +1031,8 @@ cossy.v <- function(expression, cls, misset, nmis=seq(1,15,2), one.se=T, mis.con
     final.nmis <- nmis[misIndex]
   }
   
-  print('Max(accuracies), accuracies:')
-  print(c(max(accuracies), accuracies))
+  #print('Max(accuracies), accuracies:')
+  #print(c(max(accuracies), accuracies))
   
   
   
@@ -1072,8 +1072,8 @@ cossy.v <- function(expression, cls, misset, nmis=seq(1,15,2), one.se=T, mis.con
     # find most consistent miss
     #consistentSubnets <- names(sortedSubnetFreq[sortedSubnetFreq >= sortedSubnetFreq[final.nmis]])
     consistentSubnets <- sortedSubnetData[1:final.nmis,'subnet']
-    print('consistentSubnets:')
-    print(consistentSubnets)
+    #print('consistentSubnets:')
+    #print(consistentSubnets)
     
     # prepare the 'misset' input for cossy
     misIds <- sapply(misset, function(mis) mis$id)
