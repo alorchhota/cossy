@@ -14,6 +14,11 @@
 library(jsonlite)
 library(cossy)
 
+data("pathwayapi")
+data("pathwayapi_json")
+
+if(getRversion() >= "2.15.1")  utils::globalVariables(c("pathwayapi", "pathwayapi_json"))
+
 
 getMisGraphFromJsonGmt <- function(jsonGmt, misnumber){
   misnumbers <- sapply(jsonGmt, function(mis) mis$misnumber)
@@ -116,7 +121,7 @@ getExpressionStatus <- function(expression, classLables, positiveClass, negative
 }
 
 
-icossy <- function(gctFile, chipfile=NA, clsFile, network, nmis, frank=T, qnorm=F, ztrans=F, sig.test="ttest"){
+icossy <- function(gctfile, chipfile=NA, clsfile, network, nmis, frank=T, qnorm=F, ztrans=F, sig.test="ttest"){
   
   tryCatch({
   
