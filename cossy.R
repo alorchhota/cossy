@@ -526,8 +526,8 @@ cossy <- function(expression, cls, misset, nmis=5, pval.ent=F, sig.test='iqr'){
     
     #d <- getDistanceMatrix(data=data, method="euclidean")
     d <- dist(data, method="euclidean")
-    
-    fit <- hclust(d,method="ward")
+    method <- ifelse(getRversion() <= "3.0.3", "ward", "ward.D")
+    fit <- hclust(d,method=method)
     clusters <- cutree(fit, k=noOfClusters)
     
     splitData <- split(as.data.frame(data), clusters)
