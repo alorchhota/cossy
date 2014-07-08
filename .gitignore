@@ -16,3 +16,6 @@ data
 
 # results
 results
+
+# built packages
+packages/*.tar.gz
