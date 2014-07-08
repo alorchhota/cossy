@@ -1,7 +1,18 @@
+#############################################################################################
+##### This script is to create the output for the internet version of cossy (icossy) ########
+##### It creates an intermediate interface to call cossy functions from web server   ########
+##### It also formats the output to make it easy for loading in web                  ########
+#############################################################################################
+
+###########################################################################
+##### This script assumes the following objects in the environment    #####
+##### 1) pathwayapi (read gmt file of pathwayapi)                     #####
+##### 2) pathwayapi_json (read json gmt file of pathwayapi)           #####
+###########################################################################
+
+ 
 library(jsonlite)
 library(cossy)
-#library(RCurl)
-library(stringr)
 
 
 getMisGraphFromJsonGmt <- function(jsonGmt, misnumber){
@@ -40,8 +51,32 @@ getNetworkJsonData <- function(network="pathwayapi"){
          pathwayapi=pathwayapi_json)
 }
 
-buildIcossyOutput <- function(cossyobj, classLables, positiveClass, negativeClass){
+buildIcossyOutput <- function(cossyobj, cls, jsonGmt){
+  misObj <- cossyobj$topmis
+  posCls <- cossyobj$cls$pos
+  negCls <- cossyobj$cls$neg
+  classLabels <- as.character(cls[,1])
   
+  
+  topMISs <- createEmptyMisList()
+  for(mi in 1:length(misObj)){
+    mis = misObj[[mi]]
+    
+    # get mis graph
+    misGraph = getMisGraphFromJsonGmt(jsonGmt = jsonGmt, misnumber = mis$subnetid)
+    
+    # set expression status in mis graph
+    misExp <- mis$profiles[mis$representative.probes, ]
+    expStatus <- getExpressionStatus(misExp, classLabels, posCls, negCls)
+    misGraph = setExpressionStatusInJsonGraph(jsonGraph = misGraph, genes = mis$representative.genes, estatus = expStatus)
+    
+    # add misGraph
+    topMISs = misList.addMis(misList = topMISs, misNumber = mi, mis = misGraph)
+  }
+  
+  jsonNet = getJson(topMISs)
+  
+  return(jsonNet)
 }
 
 createEmptyMisList <- function(){
@@ -98,29 +133,7 @@ icossy <- function(gctFile, chipfile=NA, clsFile, network, nmis, frank=T, qnorm=
     csy <- cossy.v(expression=processedData, cls=cls, misset=miss, nmis=nmis, one.se=F, mis.consistency=T, sig.test = sig.test)
     
     # create icossy output
-    misObj <- csy$topmis
-    posCls <- csy$cls$pos
-    negCls <- csy$cls$neg
-    classLabels <- as.character(cls[,1])
-    
-    
-    topMISs <- createEmptyMisList()
-    for(mi in 1:length(misObj)){
-      mis = misObj[[mi]]
-      
-      # get mis graph
-      misGraph = getMisGraphFromJsonGmt(jsonGmt = jsonGmt, misnumber = str_trim(mis$subnetid))
-      
-      # set expression status in mis graph
-      misExp <- mis$profiles[mis$representative.probes, ]
-      expStatus <- getExpressionStatus(misExp, classLabels, posCls, negCls)
-      misGraph = setExpressionStatusInJsonGraph(jsonGraph = misGraph, genes = mis$representative.genes, estatus = expStatus)
-      
-      # add misGraph
-      topMISs = misList.addMis(misList = topMISs, misNumber = mi, mis = misGraph)
-    }
-    
-    jsonCsyNet = getJson(topMISs)
+    jsonCsyNet <- buildIcossyOutput(cossyobj = csy, cls = cls, jsonGmt = jsonGmt)
     toReturn <- list(status="OK", network=jsonCsyNet)
     
   }, error = function(e) {
@@ -130,6 +143,4 @@ icossy <- function(gctFile, chipfile=NA, clsFile, network, nmis, frank=T, qnorm=
   })
   
 }
-
-
 
