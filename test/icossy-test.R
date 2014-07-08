@@ -7,9 +7,9 @@ gctfile <- paste0("data/cns.gct")
 clsfile <- paste0("data/cns.cls")
 
 
-icsy <- icossy(gctFile = gctFile,
+icsy <- icossy(gctfile = gctfile,
                chipfile = NA, 
-               clsFile = clsfile, 
+               clsfile = clsfile, 
                network = "pathwayapi", 
                nmis = 5, 
                frank = T, 
