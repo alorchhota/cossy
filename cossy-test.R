@@ -62,7 +62,7 @@ tsclass <- cls[testSampleNumber,,drop=F]
 tsdata <- preprocessTestExpression(preprocessObj=preprocobj, expression=tsdata)$expression
 
 # predict test sample and show output
-prediction <- predict(cossyobj=csy,expression=tsdata)
+prediction <- cossy.predict(cossyobj=csy,expression=tsdata)
 print(paste0("Actual Class: ", tsclass[,'class'], "; Predicted Class: ", prediction$cls))
 
 print(Sys.time())

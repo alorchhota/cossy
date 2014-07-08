@@ -34,7 +34,7 @@ readClass <- function(clsfile){
 fuzzyRankNormalize <- function(expressionData, frank){
   ## frank parameter can be a logical value or a vector of 2 numbers (theta1 & theta2)
   ## for detail about frank, see the following paper:
-  ## Lim,K. and Wong,L. (2014) Finding consistent disease subnetworks using PFSNet. Bioinformatics, 30, 189â€“96.
+  ## Lim,K. and Wong,L. (2014) Finding consistent disease subnetworks using PFSNet. Bioinformatics, 30, 189–96.
   
   doFrankNormalization <- F
   theta1 <- -1
@@ -526,8 +526,8 @@ cossy <- function(expression, cls, misset, nmis=5, pval.ent=F, sig.test='iqr'){
     
     #d <- getDistanceMatrix(data=data, method="euclidean")
     d <- dist(data, method="euclidean")
-    
-    fit <- hclust(d,method="ward")
+    method <- ifelse(getRversion() <= "3.0.3", "ward", "ward.D")
+    fit <- hclust(d,method=method)
     clusters <- cutree(fit, k=noOfClusters)
     
     splitData <- split(as.data.frame(data), clusters)
@@ -826,7 +826,7 @@ cossy <- function(expression, cls, misset, nmis=5, pval.ent=F, sig.test='iqr'){
   
 }
 
-predict <- function(cossyobj, expression){
+cossy.predict <- function(cossyobj, expression){
 #   g2pmap
 #   gis <- kgis[[gisIndex]]
 #   centers <- clusterings[[gisIndex]]
@@ -989,7 +989,7 @@ cossy.v <- function(expression, cls, misset, nmis=seq(1,15,2), one.se=T, mis.con
     predictions <- lapply(nmis, function(nm){
       csy1 <- csy
       csy1$topmis <- csy1$topmis[1:nm]
-      prediction <- predict(cossyobj=csy1,expression=vdata)
+      prediction <- cossy.predict(cossyobj=csy1,expression=vdata)
     })
     
     return(list(model=csy, predictions=predictions))

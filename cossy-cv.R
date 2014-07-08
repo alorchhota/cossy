@@ -82,7 +82,7 @@ cvresults <- lapply(1:n.fold, function(fold){
   tsdata <- preprocessTestExpression(preprocessObj=preprocobj, expression=tsdata)$expression
   
   # predict test sample and show output
-  prediction <- predict(cossyobj=csy,expression=tsdata)
+  prediction <- cossy.predict(cossyobj=csy,expression=tsdata)
   
   return(prediction)
 })
