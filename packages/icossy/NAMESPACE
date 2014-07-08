@@ -1,0 +1,4 @@
+#exportPattern("^[[:alpha:]]+")
+export(icossy)
+
+import(utils, stats, limma, igraph, cossy, jsonlite)
