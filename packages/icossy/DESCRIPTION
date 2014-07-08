@@ -7,4 +7,4 @@ Author: Ashis Saha
 Maintainer: Ashis Saha <ashis@korea.ac.kr>
 Description: This package helps web development of cossy.
 License: GPL-2
-Depends: utils, stats, limma, igraph (>= 0.6.5), cossy (>= 1.1), jsonlite, R (>= 3.0.2)
+Depends: utils, stats, limma, igraph (>= 0.6.5), cossy (>= 1.1), jsonlite, R (>= 2.15.3)

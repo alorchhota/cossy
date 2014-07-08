@@ -7,4 +7,4 @@ Author: Ashis Saha
 Maintainer: Ashis Saha <ashis@korea.ac.kr>
 Description: Implements the COSSY algorithm.
 License: GPL-2
-Depends: utils, stats, limma, igraph (>= 0.6.5), R (>= 3.0.2)
+Depends: utils, stats, limma, igraph (>= 0.6.5), R (>= 2.15.3)
