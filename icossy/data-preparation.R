@@ -3,6 +3,8 @@
 ##### The rda file will be binded with the package  #############
 #################################################################
 
+library(jsonlite)
+
 dataOutputFile <- "results/icossy.rda"
 
 readGmtFile <- function(gmt_file_path){
@@ -23,6 +25,8 @@ pathwayapi <- readGmtFile("./data/pathwayapi.gmt")
 pathwayapi_json <- readJsonGmtFile("./data/pathwayapi.json")
 
 
-save(pathwayapi, pathwayapi_json, file = dataOutputFile)
+#save(pathwayapi, pathwayapi_json, file = dataOutputFile)
+save(pathwayapi, file = "./results/pathwayapi.rda")
+save(pathwayapi_json, file = "./results/pathwayapi_json.rda")
 
-cat('Data saved in ', getwd(), "/", dataOutputFile, sep = "")
+cat('Data saved in the directory ', getwd(), '/results/', sep = "")
