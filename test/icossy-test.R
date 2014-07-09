@@ -3,15 +3,15 @@ source("./icossy/data-preparation.R")
 
 
 
-gctfile <- paste0("data/cns.gct")
-clsfile <- paste0("data/cns.cls")
+gctfile <- paste0("data/leukemia.gct")
+clsfile <- paste0("data/leukemia.cls")
 
-
+debug(icossy)
 icsy <- icossy(gctfile = gctfile,
                chipfile = NA, 
                clsfile = clsfile, 
                network = "pathwayapi", 
-               nmis = 5, 
+               nmis = 15, 
                frank = T, 
                qnorm = F, 
                ztrans = F,

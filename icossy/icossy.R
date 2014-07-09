@@ -152,7 +152,7 @@ icossy <- function(gctfile, chipfile=NA, clsfile, network, nmis, frank=T, qnorm=
     
     # create icossy output
     jsonCsyNet <- buildIcossyOutput(cossyobj = csy, cls = cls, jsonGmt = jsonGmt)
-    toReturn <- list(status="OK", network=jsonCsyNet)
+    toReturn <- list(status="OK", network=jsonCsyNet, classes=c(csy$cls$pos, csy$cls$neg))
     
   }, error = function(e) {
     errmsg <- paste0("CossyException: ",conditionMessage(e)) 

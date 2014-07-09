@@ -3,7 +3,7 @@ require_once './rserve-php/settings/config.php';
 require './rserve-php/Connection.php';
 require './cossy-helper.php';
 
-$cossydebug = TRUE;
+$cossydebug = FALSE;
 
 if ($cossydebug) 
 	require './rserve-php/segments/head.php';
@@ -21,27 +21,9 @@ function constructCossyOutput($x, $mis, $outtype="plain") {
 	}
 	
     if($outtype=="plain"){
-		$outputText = "";
-		for($i=0; $i<$mis; $i++){
-			$misobj = $x['results'][$i];
-			for($j=0; $j<5; $j++)
-				 $outputText = $outputText . $misobj['representative.genes'][$j] . "|" . $misobj['representative.expression'][$j] . "\r\n";
-		}
-		
+		$outputText = $x["status"] . "\r\n" . $x["classes"][0] . "|" . $x["classes"][1] . "\r\n" . $x["network"];
 	} elseif($outtype=="xml"){
-		$outputText = "<cossy><status>OK</status><results>";
-		
-		for($i=0; $i<$mis; $i++){
-			$misobj = $x['results'][$i];
-			$outputText = $outputText . "<mis>";
-			for($j=0; $j<5; $j++){
-				$outputText = $outputText . "<gene>";
-				$outputText = $outputText . "<symbol>". $misobj['representative.genes'][$j] . "</symbol><expression>" . $misobj['representative.expression'][$j] . "</expression>";
-				$outputText = $outputText . "</gene>";
-			}
-			$outputText = $outputText . "</mis>";
-		}
-		$outputText = $outputText . "</results></cossy>";
+		$outputText = "<cossy><status>OK</status><classes><positive>" . $x["classes"][0]  . "</positive><negative>" . $x["classes"][1]  . "</negative></classes><network>" .  $x["network"] . "</network></cossy>";
 	} else{
 		$outputText = $outputText . constructErrorOutput($x, 'xml');
 	}
@@ -116,44 +98,40 @@ if ($inputOK)
 		$r = new Rserve_Connection(RSERVE_HOST, RSERVE_PORT);
 		if ($cossydebug) echo (' OK</p>');
 		
-		//// get the currect R directory
-		$cmd = 'getwd()';
-		$curdir = $r->evalString($cmd, Rserve_Connection::PARSER_NATIVE); 
-		if ($cossydebug) echo ("Current directory: ". $curdir . "</p>");
+		//// read the uploaded filepaths
+		$gctfilepath = $_FILES["gctfile"]["tmp_name"];
+		$clsfilepath = $_FILES["clsfile"]["tmp_name"];
 		
-		// //// move the uploaded files to the current R direcoty.
-		// $gctfilepath = $curdir."/userdb.gct";
-		// $clsfilepath = $curdir."/userdb.cls";
-		
-		// if($profiletype=="microarray")	$chipfilepath = $curdir."/userdb.chip";
-		
-		// move_uploaded_file($_FILES["gctfile"]["tmp_name"], $gctfilepath );
-		// move_uploaded_file($_FILES["clsfile"]["tmp_name"], $clsfilepath );
-		// if($profiletype=="microarray")	move_uploaded_file($_FILES["chipfile"]["tmp_name"], $chipfilepath );
+		$chipfilepath = "NA";
+		if($profiletype=="microarray")	$chipfilepath = $_FILES["chipfile"]["tmp_name"];
 
-		// //// read inputs
-		// $mis = (int) $_POST["mis"]; 	// should read from POST request
-		// $net = $_POST["network"];
+		//// read inputs
+		$mis = (int) $_POST["mis"]; 	// should read from POST request
+		$net = $_POST["network"];
 		
 		
-		// //// run cossy
-		// $cmd = "cossy(dataset='userdb', network='" . $net . "', T=" . $mis . ", data.type='" . $profiletype . "')";
-		// //$cmd = "mis";
-		// $x = $r->evalString($cmd, Rserve_Connection::PARSER_NATIVE);
-		// $output = constructCossyOutput($x, $mis, $format);
-		// //$output = "";
+		//// perform cossy analysis
+		// load icossy library
+		$cmd = "library(icossy)";
+		$x = $r->evalString($cmd, Rserve_Connection::PARSER_NATIVE);
 		
-		// if ($cossydebug) echo ( "<p>cleaning resources.... </p>");
-		// unlink($gctfilepath );
-		// unlink($clsfilepath );
-		// if($profiletype=="microarray")	unlink($chipfilepath );
+		// run icossy function
+		$formatedchipfile = ($profiletype=="microarray" ? "'". $chipfilepath."'" : $chipfilepath);
+		$cmd = "icossy(gctfile = '" . $gctfilepath . "', chipfile = " . $formatedchipfile .", clsfile = '" . $clsfilepath . "', network = '" . $net . "', nmis = " . $mis . ", frank = T, qnorm = F, ztrans = F, sig.test = 'ttest')";
+		$x = $r->evalString($cmd, Rserve_Connection::PARSER_NATIVE);
+		
+		// build output
+		$output = constructCossyOutput($x, $mis, $format);
+		//$output = "";
+		
+		if ($cossydebug) echo ( "<p>cleaning resources.... </p>");
+		unlink($gctfilepath );
+		unlink($clsfilepath );
+		if($profiletype=="microarray")	unlink($chipfilepath );
 		$r->close();
 		
 		
-		
-		
 	} catch(Exception $e) {
-		// echo "CossyException: [" . get_class($e) . "] " .  $e->getMessage();
 		$errmsg = "CossyException: [" . get_class($e) . "] " .  $e->getMessage();
 		$output = constructErrorOutput($errmsg, $format);
 		
