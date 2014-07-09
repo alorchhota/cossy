@@ -7,6 +7,10 @@ readExpression <- function(gctfile, chipfile=NA){
     annotations <- read.table(chipfile, header=TRUE, sep="\t", colClasses=c('character'), comment.char="", quote="");
     colnames(annotations) <- tolower(colnames(annotations))
     
+    annotationPercentage <- length(intersect(gct[,'name'], annotations[,'probe.set.id'])) / nrow(gct)
+    if(annotationPercentage < .25)
+      stop('Not enough annotations available. Please check gctfile and chipfile.')
+    
     probeAnnotations <- merge(x=gct[,"name",drop=F], y=annotations, by.x="name", by.y="probe.set.id", all.x=TRUE, all.y=FALSE)
     rownames(probeAnnotations) <- probeAnnotations$name
     kidInputs <- probeAnnotations[gct$name,"gene.symbol"]
@@ -34,7 +38,7 @@ readClass <- function(clsfile){
 fuzzyRankNormalize <- function(expressionData, frank){
   ## frank parameter can be a logical value or a vector of 2 numbers (theta1 & theta2)
   ## for detail about frank, see the following paper:
-  ## Lim,K. and Wong,L. (2014) Finding consistent disease subnetworks using PFSNet. Bioinformatics, 30, 189–96.
+  ## Lim,K. and Wong,L. (2014) Finding consistent disease subnetworks using PFSNet. Bioinformatics, 30, 189?96.
   
   doFrankNormalization <- F
   theta1 <- -1
@@ -284,6 +288,7 @@ cossy <- function(expression, cls, misset, nmis=5, pval.ent=F, sig.test='iqr'){
     
     return(gid2probeid)
   }
+  
   
   ################ process initial_gene_sets. if gene_set does not contain enough probes (<5 probes), discard it. ################################
   ################ this is used only to avoid computation cost due to small size geneset, data is not used in training or testing.  ##############
