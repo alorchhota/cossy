@@ -32,3 +32,19 @@ icsy <- icossy(gctfile = gctfile,
                sig.test = "ttest",
                mis.consistency = F)
 print(icsy$status)
+
+
+gctfile <- "data/cns.gct"
+clsfile <- "data/cns.cls"
+
+icsy <- icossy(gctfile = gctfile,
+               chipfile = NA, 
+               clsfile = clsfile, 
+               network = "string", 
+               nmis = 5, 
+               frank = T, 
+               qnorm = F, 
+               ztrans = F,
+               sig.test = "ttest",
+               mis.consistency = F)
+print(icsy$status)

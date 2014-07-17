@@ -14,10 +14,10 @@
 library(jsonlite)
 library(cossy)
 
-#data("pathwayapi")
-#data("pathwayapi_json")
-
-if(getRversion() >= "2.15.1")  utils::globalVariables(c("pathwayapi", "pathwayapi_json"))
+## LOAD_NETWORK
+if(getRversion() >= "2.15.1")  utils::globalVariables(c("pathwayapi", "pathwayapi_json", 
+                                                        "kegg", "kegg_json",
+                                                        "string", "string_json"))
 
 
 getMisGraphFromJsonGmt <- function(jsonGmt, misnumber){
@@ -45,28 +45,43 @@ setExpressionStatusInJsonGraph <- function(jsonGraph, genes, estatus, pos.col, n
   return(jsonGraph)
 }
 
+## LOAD_NETWORK
 lazyLoad <- function(dataVar){
   if(!exists(dataVar)){
     if(dataVar == "pathwayapi")
       data("pathwayapi")
     else if(dataVar == "pathwayapi_json")
       data("pathwayapi_json")
+    else if(dataVar == "kegg")
+      data("kegg")
+    else if(dataVar == "kegg_json")
+      data("kegg_json")
+    else if(dataVar == "string")
+      data("string")
+    else if(dataVar == "string_json")
+      data("string_json")
     else
       stop(paste('Invalid data to load :', dataVar))
   }
 }
 
+## LOAD_NETWORK
 getNetworkData <- function(network="pathwayapi"){
   lazyLoad(network)
   switch(network,
-         pathwayapi=pathwayapi)
+         pathwayapi=pathwayapi,
+         kegg=kegg,
+         string=string)
 }
 
+## LOAD_NETWORK
 getNetworkJsonData <- function(network="pathwayapi"){
   lazyLoad(paste0(network, "_json"))
   
   switch(network,
-         pathwayapi=pathwayapi_json)
+         pathwayapi=pathwayapi_json,
+         kegg=kegg_json,
+         string=string_json)
 }
 
 buildIcossyOutput <- function(cossyobj, cls, jsonGmt){

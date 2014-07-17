@@ -262,6 +262,10 @@ cossy <- function(expression, cls, misset, nmis=5, pval.ent=F, sig.test='iqr'){
     stop("There must be exactly two unique class labels.")
   }
   
+  if(length(misset) < k){
+    stop(paste0("Not enough MISs."))
+  }
+  
   ####### set some initial values, that could not be saved before reading the inputs.############
   NoOfClusters <- round(sqrt(expression.nsamples/2))
   uniqueClasses <- sort(as.character(unique(classes[,1])))
