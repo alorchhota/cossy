@@ -8,7 +8,7 @@ Cossy in Internet.
 This package helps web development of cossy.
 }
 \usage{
-icossy(gctfile, chipfile = NA, clsfile, network, nmis, frank = T, qnorm = F, ztrans = F, sig.test = "ttest")
+icossy(gctfile, chipfile = NA, clsfile, network, nmis, frank = T, qnorm = F, ztrans = F, sig.test = "ttest", mis.consistency=T)
 }
 
 \arguments{
@@ -21,6 +21,7 @@ icossy(gctfile, chipfile = NA, clsfile, network, nmis, frank = T, qnorm = F, ztr
   \item{qnorm}{Logical: use quanlite normalization.}
   \item{ztrans}{Logical: use z-transformation.}
   \item{sig.test}{Character string (either 'ttest' or 'iqr')}
+  \item{mis.consistency}{Logical: should return consistent mis?}
 }
 \details{
 The format of gctfile, chipfile and clsfile are available \href{http://www.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats}{here}. If chipfile == NA, the mapping from row id (in gct file) to genes is done using the DESCRIPTION column of the gct file, which should contain the corresponding gene symbols.

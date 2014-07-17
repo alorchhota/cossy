@@ -156,7 +156,7 @@ getExpressionStatus <- function(expression, classLables, positiveClass, negative
 }
 
 
-icossy <- function(gctfile, chipfile=NA, clsfile, network, nmis, frank=T, qnorm=F, ztrans=F, sig.test="ttest"){
+icossy <- function(gctfile, chipfile=NA, clsfile, network, nmis, frank=T, qnorm=F, ztrans=F, sig.test="ttest", mis.consistency=T){
   
   tryCatch({
   
@@ -170,7 +170,13 @@ icossy <- function(gctfile, chipfile=NA, clsfile, network, nmis, frank=T, qnorm=
     processedData <- preprocobj$expression
     
     # build model
-    csy <- cossy.v(expression=processedData, cls=cls, misset=miss, nmis=nmis, one.se=F, mis.consistency=T, sig.test = sig.test)
+    if(mis.consistency){
+      csy <- cossy.v(expression=processedData, cls=cls, misset=miss, nmis=nmis, one.se=F, mis.consistency=T, sig.test = sig.test)
+    }
+    else{
+      csy <- cossy( expression=processedData, cls=cls, misset=miss, nmis=nmis, sig.test = sig.test)
+    }
+    
     
     # create icossy output
     jsonCsyNet <- buildIcossyOutput(cossyobj = csy, cls = cls, jsonGmt = jsonGmt)

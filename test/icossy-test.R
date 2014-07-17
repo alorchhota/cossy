@@ -29,5 +29,6 @@ icsy <- icossy(gctfile = gctfile,
                frank = T, 
                qnorm = F, 
                ztrans = F,
-               sig.test = "ttest")
+               sig.test = "ttest",
+               mis.consistency = F)
 print(icsy$status)
