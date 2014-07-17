@@ -70,12 +70,53 @@ if($format==NULL ||  strtolower($format) !="xml"){
 }	
 $format = strtolower($format);
 
-	
+$mis = $_POST["mis"];
+if($mis==NULL ||  !is_numeric($mis)){
+	$mis="5";
+}
+$mis = (int)$mis;
+
+$net = $_POST["network"];
+if($net==NULL){
+	$net="pathwayapi";
+}	
+$net = strtolower($net);
+
+$sigtest = $_POST["sigtest"];
+if($sigtest==NULL || strtolower($sigtest) !="iqr"){
+	$sigtest="ttest";
+}	
+$sigtest = strtolower($sigtest);
+
+$frank = $_POST["frank"];
+if($frank==NULL ||  strtolower($frank) !="false"){
+	$frank="true";
+}
+$frank = strtoupper($frank);
+
+$qnorm = $_POST["qnorm"];
+if($qnorm==NULL || strtolower($qnorm) !="true"){
+	$qnorm="false";
+}
+$qnorm = strtoupper($qnorm);
+
+$ztrans = $_POST["ztrans"];
+if($ztrans==NULL || strtolower($ztrans) !="true"){
+	$ztrans="false";
+}	
+$ztrans = strtoupper($ztrans);
+
+$misconsistency = $_POST["misconsistency"];
+if($misconsistency==NULL || strtolower($misconsistency) !="false"){
+	$misconsistency="true";
+}
+$misconsistency = strtoupper($misconsistency);
+
+
 if (!fileUploaded("gctfile") || !fileUploaded("clsfile") || ($profiletype=="microarray" && !fileUploaded("chipfile")))
 {
 	$inputOK = FALSE;
 	$errormsg = "Sorry, you need to upload all the files.";
-	
 }
 
 
@@ -106,8 +147,8 @@ if ($inputOK)
 		if($profiletype=="microarray")	$chipfilepath = $_FILES["chipfile"]["tmp_name"];
 
 		//// read inputs
-		$mis = (int) $_POST["mis"]; 	// should read from POST request
-		$net = $_POST["network"];
+		//$mis = (int) $_POST["mis"]; 	// should read from POST request
+		//$net = $_POST["network"];
 		
 		
 		//// perform cossy analysis
@@ -117,12 +158,11 @@ if ($inputOK)
 		
 		// run icossy function
 		$formatedchipfile = ($profiletype=="microarray" ? "'". $chipfilepath."'" : $chipfilepath);
-		$cmd = "icossy(gctfile = '" . $gctfilepath . "', chipfile = " . $formatedchipfile .", clsfile = '" . $clsfilepath . "', network = '" . $net . "', nmis = " . $mis . ", frank = T, qnorm = F, ztrans = F, sig.test = 'ttest')";
+		$cmd = "icossy(gctfile = '" . $gctfilepath . "', chipfile = " . $formatedchipfile .", clsfile = '" . $clsfilepath . "', network = '" . $net . "', nmis = " . $mis . ", frank = " . $frank . ", qnorm = " . $qnorm .", ztrans = " . $ztrans . ", sig.test = '" . $sigtest ."', mis.consistency='" . $misconsistency . "')";
 		$x = $r->evalString($cmd, Rserve_Connection::PARSER_NATIVE);
 		
 		// build output
 		$output = constructCossyOutput($x, $mis, $format);
-		//$output = "";
 		
 		if ($cossydebug) echo ( "<p>cleaning resources.... </p>");
 		unlink($gctfilepath );

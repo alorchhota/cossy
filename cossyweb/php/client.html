@@ -11,8 +11,33 @@
 		<input type="radio" name="profiletype" value="rnaseq">Rnaseq<br/>
 		<label for="chipfile">Select Chip File </label>
 		<input type="file" name="chipfile" id="chipfile"><br>
-		<input type="hidden" name="mis" id="mis" value="15"><br>
-		<input type="hidden" name="network" id="network" value="pathwayapi"><br>
+		<!--input type="hidden" name="mis" id="mis" value="15"><br-->
+		<label for="mis">#MIS </label>
+		<select name="mis">
+			<option value="5" selected>5</option>
+			<option value="10">10</option>
+			<option value="15">15</option>
+			<option value="20">20</option>
+		</select><br>
+		
+		<!--input type="hidden" name="network" id="network" value="pathwayapi"><br-->
+		<label for="network">Network </label>
+		<select name="network">
+			<option value="kegg">KEGG</option>
+			<option value="string">STRING</option>
+			<option value="pathwayapi" selected>Pathway API</option>
+		</select><br>
+		
+		<input type="hidden" name="misconsistency" value="false" >
+		<input type="checkbox" name="misconsistency" value="true" checked>MIS Consistency<br>
+		<input type="hidden" name="frank" value="false" >
+		<input type="checkbox" name="frank" value="true" checked>Fuzzy normalization<br>
+		<input type="checkbox" name="qnorm" value="true" >Quantile normalization<br>
+		<input type="checkbox" name="ztrans" value="true" >Z-transform<br>
+		<label for="sigtest">Significance Test </label>
+		<input type="radio" name="sigtest" value="ttest" checked>t-test
+		<input type="radio" name="sigtest" value="iqr">Modified t-test (IQR based)<br>
+		
 		<input type="submit" name="submit" value="Analyze & Explore">
 	</form>
 
