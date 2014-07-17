@@ -29,7 +29,7 @@ getMisGraphFromJsonGmt <- function(jsonGmt, misnumber){
   return(NULL)
 }
 
-setExpressionStatusInJsonGraph <- function(jsonGraph, genes, estatus){
+setExpressionStatusInJsonGraph <- function(jsonGraph, genes, estatus, pos.col, neg.col){
   if(length(genes)!=length(estatus) || length(genes)==0)
     stop('gene and estatus must be of same non-zero length.')
   
@@ -38,7 +38,7 @@ setExpressionStatusInJsonGraph <- function(jsonGraph, genes, estatus){
     nodeIndexes <- which(nodeLabels == genes[gi])
     for(ni in nodeIndexes){
       jsonGraph$data$nodes[[ni]]$expression = estatus[gi]
-      jsonGraph$data$nodes[[ni]]$color = ifelse(estatus[gi]=="overexpressed", "red", "green")
+      jsonGraph$data$nodes[[ni]]$color = ifelse(estatus[gi]=="overexpressed", pos.col, neg.col)
     }
   }
   
@@ -77,6 +77,9 @@ buildIcossyOutput <- function(cossyobj, cls, jsonGmt){
   
   
   topMISs <- createEmptyMisList()
+  
+  ## Firstly color all the nodes available in the dataset and save the graphs.
+  misGraphs <- list()
   for(mi in 1:length(misObj)){
     mis = misObj[[mi]]
     
@@ -84,9 +87,28 @@ buildIcossyOutput <- function(cossyobj, cls, jsonGmt){
     misGraph = getMisGraphFromJsonGmt(jsonGmt = jsonGmt, misnumber = mis$subnetid)
     
     # set expression status in mis graph
+    misExp <- mis$profiles[mis$probes, ]
+    expStatus <- getExpressionStatus(misExp, classLabels, posCls, negCls)
+    misGraph = setExpressionStatusInJsonGraph(jsonGraph = misGraph, genes = mis$genes, estatus = expStatus, pos.col="maroon", neg.col="olive")
+    
+    # save misGraph
+    misGraphs[[mi]] <- misGraph
+  }
+  
+  ## Now, color the representative nodes. 
+  ## These nodes should be colored after all normal colorings.
+  ## Thus, representative nodes are rightly colored even in overlapped networks.
+  
+  for(mi in 1:length(misObj)){
+    mis = misObj[[mi]]
+    
+    # get mis graph
+    misGraph = misGraphs[[mi]]
+    
+    # set expression status of representative genes in mis graph
     misExp <- mis$profiles[mis$representative.probes, ]
     expStatus <- getExpressionStatus(misExp, classLabels, posCls, negCls)
-    misGraph = setExpressionStatusInJsonGraph(jsonGraph = misGraph, genes = mis$representative.genes, estatus = expStatus)
+    misGraph = setExpressionStatusInJsonGraph(jsonGraph = misGraph, genes = mis$representative.genes, estatus = expStatus, pos.col="red", neg.col="green")
     
     # add misGraph
     topMISs = misList.addMis(misList = topMISs, misNumber = mi, mis = misGraph)
