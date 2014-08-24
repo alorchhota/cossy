@@ -29,3 +29,14 @@ R CMD Rserve --RS-port 6312 --RS-workdir /etc/icossy/sessions/
 ## Stop RServe
 Find the process id of Rserve: netstat -ap
 Kill the process: sudo kill PID
+
+
+############# reinstall icossy ########################
+# detach icossy if it is being used
+detach("package:icossy", unload=TRUE)
+
+# uninstall
+remove.packages("icossy")
+
+# install
+install.packages("PKG_FILE_PATH", repos = NULL, type = "source")
