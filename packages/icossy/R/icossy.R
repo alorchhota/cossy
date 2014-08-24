@@ -174,6 +174,14 @@ getExpressionFold <- function(expression, classLables, positiveClass, negativeCl
   return(expressionFolds)
 }
 
+## construct fold-change string including all probes
+## note: ';' cannot be a separtor, as it is used in kid for multiple gene mappings
+buildFoldOutputString <- function(names, genes, folds, colSep='\t', rowSep='|'){
+  folds <- round(folds, digits=2)
+  s <- paste(names, genes, folds, sep = colSep, collapse = rowSep)
+  return(s)
+}
+
 
 icossy <- function(gctfile, chipfile=NA, clsfile, network, nmis, frank=T, qnorm=F, ztrans=F, sig.test="ttest", mis.consistency=T){
   
@@ -196,44 +204,16 @@ icossy <- function(gctfile, chipfile=NA, clsfile, network, nmis, frank=T, qnorm=
       csy <- cossy( expression=processedData, cls=cls, misset=miss, nmis=nmis, sig.test = sig.test)
     }
     
+    ### all fold values
+    mappedData <- processedData[processedData$kid!="-", ]  ## filter unmapped probes
+    expFolds <- getExpressionFold(expression = mappedData, classLables = cls, positiveClass = csy$cls$pos, negativeClass = csy$cls$neg)
+    expFoldsStr <- buildFoldOutputString(names=mappedData$name, genes=mappedData$kid, folds=expFolds)
+    
     
     # create icossy output
     jsonCsyNet <- buildIcossyOutput(cossyobj = csy, cls = cls, jsonGmt = jsonGmt)
-    toReturn <- list(status="OK", network=jsonCsyNet, classes=c(csy$cls$pos, csy$cls$neg))
-    
-  }, error = function(e) {
-    errmsg <- paste0("CossyException: ",conditionMessage(e)) 
-    errReturn <- list(status="ERROR", error=errmsg)
-    return(errReturn)
-  })
-  
-}
-
-getAllExpressionFolds <- function(gctfile, chipfile=NA, clsfile, frank=T, qnorm=F, ztrans=F){
-  
-  tryCatch({
-    
-    exdata <- readExpression(gctfile = gctfile, chipfile = chipfile)
-    cls <- readClass(clsfile=clsfile)
-    
-    # preprocess
-    preprocobj <- preprocessTrainingExpression(expression=exdata, frank = frank, qnorm = qnorm, ztrans = ztrans)
-    processedData <- preprocobj$expression
-    
-    # filter probes without any gene map
-    processedData <- processedData[processedData$kid!="-", ]
-    
-    ## get positive class (*** the logic must be same as it is in cossy.R ***)
-    uniqueClasses <- sort(as.character(unique(cls[,1])))
-    negativeClass <- uniqueClasses[1]
-    positiveClass <- uniqueClasses[2]
-    
-    # calculate fold values of every probe
-    expFolds <- getExpressionFold(expression = processedData, classLables = cls, positiveClass = positiveClass, negativeClass = negativeClass)
-    
-    # return fold values in a data frame
-    toReturn <- data.frame(name=processedData$name, gene=processedData$kid, fold=expFolds)
-    return(toReturn)    
+    toReturn <- list(status="OK", network=jsonCsyNet, classes=c(csy$cls$pos, csy$cls$neg), folds=expFoldsStr)
+    return(toReturn)
     
   }, error = function(e) {
     errmsg <- paste0("CossyException: ",conditionMessage(e)) 
