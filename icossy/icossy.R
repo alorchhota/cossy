@@ -37,8 +37,9 @@ setExpressionStatusInJsonGraph <- function(jsonGraph, genes, estatus, pos.col, n
   for(gi in 1:length(genes)){
     nodeIndexes <- which(nodeLabels == genes[gi])
     for(ni in nodeIndexes){
-      jsonGraph$data$nodes[[ni]]$expression = estatus[gi]
-      jsonGraph$data$nodes[[ni]]$color = ifelse(estatus[gi]=="overexpressed", pos.col, neg.col)
+      jsonGraph$data$nodes[[ni]]$fold = estatus[gi]
+      jsonGraph$data$nodes[[ni]]$expression = ifelse(estatus[gi]>0, "overexpressed", "underexpressed")
+      jsonGraph$data$nodes[[ni]]$color = ifelse(estatus[gi]>0, pos.col, neg.col)
     }
   }
   
@@ -103,8 +104,8 @@ buildIcossyOutput <- function(cossyobj, cls, jsonGmt){
     
     # set expression status in mis graph
     misExp <- mis$profiles[mis$probes, ]
-    expStatus <- getExpressionStatus(misExp, classLabels, posCls, negCls)
-    misGraph = setExpressionStatusInJsonGraph(jsonGraph = misGraph, genes = mis$genes, estatus = expStatus, pos.col="maroon", neg.col="olive")
+    expFolds <- getExpressionFold(misExp, classLabels, posCls, negCls)
+    misGraph = setExpressionStatusInJsonGraph(jsonGraph = misGraph, genes = mis$genes, estatus = expFolds, pos.col="maroon", neg.col="olive")
     
     # save misGraph
     misGraphs[[mi]] <- misGraph
@@ -122,8 +123,8 @@ buildIcossyOutput <- function(cossyobj, cls, jsonGmt){
     
     # set expression status of representative genes in mis graph
     misExp <- mis$profiles[mis$representative.probes, ]
-    expStatus <- getExpressionStatus(misExp, classLabels, posCls, negCls)
-    misGraph = setExpressionStatusInJsonGraph(jsonGraph = misGraph, genes = mis$representative.genes, estatus = expStatus, pos.col="red", neg.col="green")
+    expFolds <- getExpressionFold(misExp, classLabels, posCls, negCls)
+    misGraph = setExpressionStatusInJsonGraph(jsonGraph = misGraph, genes = mis$representative.genes, estatus = expFolds, pos.col="red", neg.col="green")
     
     # add misGraph
     topMISs = misList.addMis(misList = topMISs, misNumber = mi, mis = misGraph)
@@ -148,26 +149,29 @@ getJson <- function(obj){
   toJSON(obj, auto_unbox = T)
 }
 
-getExpressionStatus <- function(expression, classLables, positiveClass, negativeClass){
+getExpressionFold <- function(expression, classLables, positiveClass, negativeClass){
   
   colIndexes <- !colnames(expression) %in% c("name","description", "kid");
   expVal <- as.data.frame(expression[, colIndexes])
   
-  isOverExpressed <- function(row){
+  getFold <- function(row){
     posVal <- as.numeric(row[classLables==positiveClass])
     negVal <- as.numeric(row[classLables==negativeClass])
     medPos <- median(posVal)
     medNeg <- median(negVal)
-    return(medPos>medNeg)
+    
+    multiplier <- ifelse(medPos >= medNeg, 1, -1)
+    nom <- max(abs(medPos), abs(medNeg))
+    den <- min(abs(medPos), abs(medNeg))
+    delta <- 0.00001
+    fold = multiplier * nom / (den + delta)
+    
+    return(fold)
   }
   
-  expressionStatus <- apply(expVal, 1, isOverExpressed)
-  expressionStatus <- tolower(as.character(unlist(expressionStatus)))
-  expressionStatus[expressionStatus=="true"] <- "overexpressed"
-  expressionStatus[expressionStatus=="false"] <- "underexpressed"
-  
-  return(expressionStatus)
-  
+  expressionFolds <- apply(expVal, 1, getFold)
+
+  return(expressionFolds)
 }
 
 
