@@ -21,9 +21,9 @@ function constructCossyOutput($x, $mis, $outtype="plain") {
 	}
 	
     if($outtype=="plain"){
-		$outputText = $x["status"] . "\r\n" . $x["classes"][0] . "|" . $x["classes"][1] . "\r\n" . $x["network"];
+		$outputText = $x["status"] . "\r\n" . $x["classes"][0] . "|" . $x["classes"][1] . "\r\n" . $x["network"] . "\r\n" . $x["folds"];
 	} elseif($outtype=="xml"){
-		$outputText = "<cossy><status>OK</status><classes><positive>" . $x["classes"][0]  . "</positive><negative>" . $x["classes"][1]  . "</negative></classes><network>" .  $x["network"] . "</network></cossy>";
+		$outputText = "<cossy><status>OK</status><classes><positive>" . $x["classes"][0]  . "</positive><negative>" . $x["classes"][1]  . "</negative></classes><network>" .  $x["network"] . "</network><fold>" .  $x["folds"] . "</fold></cossy>";
 	} else{
 		$outputText = $outputText . constructErrorOutput($x, 'xml');
 	}
@@ -156,11 +156,15 @@ if ($inputOK)
 		$cmd = "library(icossy)";
 		$x = $r->evalString($cmd, Rserve_Connection::PARSER_NATIVE);
 		
+		if ($cossydebug) echo('<p>successfully loaded libraries</p>');
+		
 		// run icossy function
 		$formatedchipfile = ($profiletype=="microarray" ? "'". $chipfilepath."'" : $chipfilepath);
 		$cmd = "icossy(gctfile = '" . $gctfilepath . "', chipfile = " . $formatedchipfile .", clsfile = '" . $clsfilepath . "', network = '" . $net . "', nmis = " . $mis . ", frank = " . $frank . ", qnorm = " . $qnorm .", ztrans = " . $ztrans . ", sig.test = '" . $sigtest ."', mis.consistency='" . $misconsistency . "')";
 		$x = $r->evalString($cmd, Rserve_Connection::PARSER_NATIVE);
 		
+		if ($cossydebug) echo('<p>' . $cmd . '</p>');		
+
 		// build output
 		$output = constructCossyOutput($x, $mis, $format);
 		
