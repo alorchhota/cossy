@@ -209,3 +209,37 @@ icossy <- function(gctfile, chipfile=NA, clsfile, network, nmis, frank=T, qnorm=
   
 }
 
+getAllExpressionFolds <- function(gctfile, chipfile=NA, clsfile, frank=T, qnorm=F, ztrans=F){
+  
+  tryCatch({
+    
+    exdata <- readExpression(gctfile = gctfile, chipfile = chipfile)
+    cls <- readClass(clsfile=clsfile)
+    
+    # preprocess
+    preprocobj <- preprocessTrainingExpression(expression=exdata, frank = frank, qnorm = qnorm, ztrans = ztrans)
+    processedData <- preprocobj$expression
+    
+    # filter probes without any gene map
+    processedData <- processedData[processedData$kid!="-", ]
+    
+    ## get positive class (*** the logic must be same as it is in cossy.R ***)
+    uniqueClasses <- sort(as.character(unique(cls[,1])))
+    negativeClass <- uniqueClasses[1]
+    positiveClass <- uniqueClasses[2]
+    
+    # calculate fold values of every probe
+    expFolds <- getExpressionFold(expression = processedData, classLables = cls, positiveClass = positiveClass, negativeClass = negativeClass)
+    
+    # return fold values in a data frame
+    toReturn <- data.frame(name=processedData$name, gene=processedData$kid, fold=expFolds)
+    return(toReturn)    
+    
+  }, error = function(e) {
+    errmsg <- paste0("CossyException: ",conditionMessage(e)) 
+    errReturn <- list(status="ERROR", error=errmsg)
+    return(errReturn)
+  })
+  
+}
+
