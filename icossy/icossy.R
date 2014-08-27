@@ -157,12 +157,12 @@ getExpressionFold <- function(expression, classLables, positiveClass, negativeCl
   getFold <- function(row){
     posVal <- as.numeric(row[classLables==positiveClass])
     negVal <- as.numeric(row[classLables==negativeClass])
-    medPos <- median(posVal)
-    medNeg <- median(negVal)
+    midPos <- mean(posVal)
+    midNeg <- mean(negVal)
     
-    multiplier <- ifelse(medPos >= medNeg, 1, -1)
-    nom <- max(abs(medPos), abs(medNeg))
-    den <- min(abs(medPos), abs(medNeg))
+    multiplier <- ifelse(midPos >= midNeg, 1, -1)
+    nom <- max(abs(midPos), abs(midNeg))
+    den <- min(abs(midPos), abs(midNeg))
     delta <- 0.00001
     fold = multiplier * nom / (den + delta)
     
